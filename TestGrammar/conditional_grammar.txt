@@ -1,0 +1,6 @@
+S -> if E then S else S
+S -> id = E
+E -> E + T
+E -> T
+T -> id
+T -> num
