@@ -1,5 +1,8 @@
 # LR语法分析器 - Makefile
-# 支持 LR(0)/SLR(1)/LR(1) 分析算法
+# Build script for LR Grammar Analyzer (Linux)
+# Author: ZJJ
+# Date: 2025.6.10
+
 # 使用方法：
 #   make         - 编译所有目标（自动删除.o文件）
 #   make keep-objects - 编译但保留.o文件（用于调试）

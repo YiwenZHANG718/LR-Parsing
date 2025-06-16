@@ -1,0 +1,6 @@
+// 经典的悬挂else问题文法 - 展示移进/归约冲突
+// LR(0)不适用，SLR(1)可能有问题，LR(1)能正确处理
+S -> if E then S else S
+S -> if E then S
+S -> other
+E -> id

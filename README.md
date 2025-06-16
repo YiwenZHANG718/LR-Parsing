@@ -1,6 +1,21 @@
-# LR语法分析器
+# LR语法分析器项目 - 完整实现
 
-一个完整的LR语法分析器实现，支持LR(0)、SLR(1)和LR(1)三种分析算法。
+本项目是一个功能完整的LR语法分析器实现，支持LR(0)、SLR(1)和LR(1)三种分析方法。项目包含C++核心算法实现和Python图形化界面，为学习编译原理和语法分析提供了实用的工具。
+
+## 技术特点
+
+### 核心功能
+- **多种LR分析方法**：完整实现LR(0)、SLR(1)、LR(1)算法
+- **分析表构造**：自动生成ACTION表和GOTO表
+- **语法分析**：支持输入串的语法分析和步骤追踪
+- **项目集生成**：可视化LR项目集族的构造过程
+- **跨平台支持**：Windows、Linux、macOS全平台兼容
+
+### 技术架构
+- **后端**：C++实现核心算法，高性能计算
+- **前端**：Python Tkinter图形界面，用户友好
+- **数据交换**：JSON格式数据传输，结构化清晰
+- **多线程**：异步处理，避免界面冻结
 
 ## 项目结构
 
@@ -22,88 +37,65 @@ LR/                                    # 项目根目录
 │
 ├── GUI/                              # 图形用户界面模块
 │   ├── GUI.py                        # 主GUI程序（完整中文界面、表格显示）
-│   ├── PROJECT_OVERVIEW.md           # GUI项目概述和设计思路
-│   ├── FEATURE_IMPLEMENTATION.md     # GUI功能实现技术细节
-│   └── USER_GUIDE_BEST_PRACTICES.md  # GUI使用指南和最佳实践
+│   ├── GUI_DESIGN_ARCHITECTURE.md    # GUI设计思想与架构文档
+│   ├── GUI_IMPLEMENTATION_DETAILS.md # GUI功能实现技术细节
+│   └── GUI_USER_GUIDE.md             # GUI使用指南和最佳实践
 │
-├── TestGrammar/                      # 标准测试文法集合
-│   ├── example_grammar.txt           # 基础算术表达式文法
-│   ├── assignment_grammar.txt        # 赋值语句文法
-│   ├── conditional_grammar.txt       # 条件语句文法
-│   └── example_complete_export.txt   # 完整导出报告示例
+├── TestGrammar/                      # 测试文法集合
+│   ├── *_grammar.txt                         # 各种测试文法文件
+│   └── *_export.txt                  # 分析结果导出示例
 │
 └── README.md                         # 项目主要说明文档（本文件）
 ```
 
-### 核心模块说明
+### 文件说明
 
-#### 1. 分析器核心 (lr_analyzer.*)
-- **主要类**: `LRAnalyzer` - 总控制器和算法协调器
-- **核心算法**: 
-  - 项目集族构造（LR(0)/LR(1)/SLR(1)算法差异化实现）
-  - ACTION/GOTO分析表生成
-  - 语法分析过程模拟
-  - 冲突检测和错误报告
-- **输出接口**: 
-  - 文本格式：用户友好的表格和过程展示
-  - JSON格式：结构化数据，便于GUI解析
-- **关键方法**:
-  - `buildLR0Items()` - LR(0)项目集构造
-  - `buildSLR1Table()` - SLR(1)分析表构造  
-  - `buildLR1Items()` - LR(1)项目集构造
-  - `parseString()` - 语法分析过程
-  - `printActionTableJSON()` - JSON格式输出
+#### Algorithm/ - 核心算法模块
+- **lr_analyzer.cpp/h**：LR分析器核心实现（主要算法）
+- **lr_item.cpp/h**：LR项目和项目集管理实现
+- **grammar.cpp/h**：文法表示、FIRST/FOLLOW集计算实现
+- **main.cpp**：交互式主程序入口
+- **lr_cli.cpp**：命令行接口程序（支持JSON输出）
+- **Makefile**：算法模块构建配置
+- **lr_cli**：编译生成的命令行可执行文件
+- **ALGORITHM_DETAILS.md**：LR算法详细技术说明
+- **CODE_ARCHITECTURE.md**：代码架构和模块间关系文档
+- **LR_CLI_DOCUMENTATION.md**：命令行工具完整使用文档
+- **LR1_DEVELOPMENT_ISSUES.md**：LR(1)开发问题与解决方案记录
 
-#### 2. 项目管理 (lr_item.*)
-- **主要类**: 
-  - `LRItem` - 单个LR项目表示（产生式+点位置+前瞻符号）
-  - `ItemSet` - 项目集合及其操作
-- **核心算法**: 
-  - `closure()` - 项目集闭包计算
-  - `gotoFunction()` - GOTO函数实现
-  - 项目集相等性判断和查找
-- **数据结构**: 
-  - 基于std::set的自动排序和去重
-  - 高效的项目集比较算法
-- **字符编码**: 解决了Unicode字符显示问题，统一使用ASCII
+#### GUI/ - 图形界面模块  
+- **GUI.py**：主要的图形用户界面程序
+- **GUI_DESIGN_ARCHITECTURE.md**：GUI设计思想与架构文档
+- **GUI_IMPLEMENTATION_DETAILS.md**：GUI功能实现技术细节
+- **GUI_USER_GUIDE.md**：GUI使用指南和最佳实践
 
-#### 3. 文法处理 (grammar.*)
-- **主要类**: 
-  - `Grammar` - 文法表示和操作接口
-  - `Production` - 单个产生式表示
-- **核心算法**: 
-  - FIRST集计算：递归+固定点迭代算法
-  - FOLLOW集计算：基于FIRST集的传播算法
-  - 文法有效性验证
-- **功能特性**:
-  - 支持ε产生式处理
-  - 自动识别终结符和非终结符
-  - 文法格式验证和错误定位
-
-#### 4. 用户接口架构
-- **main.cpp**: 
-  - 提供交互式命令行界面
-  - 循环式文法输入和测试
-  - 实时反馈和错误提示
-- **lr_cli.cpp**: 
-  - 批处理友好的命令行工具
-  - 支持管道操作和脚本调用
-  - JSON输出模式（`g_silent_mode`控制）
-  - 多种分析选项：表格显示、项目集查看、字符串分析
-- **GUI.py**: 
-  - 完整的图形化用户界面
-  - 多线程后端调用，避免界面冻结
-  - 实时状态更新和错误反馈
-  - 支持结果导出和报告生成
+#### TestGrammar/ - 测试用例
+- **文法文件**：包含各种复杂度和特性的测试文法
+- **导出示例**：完整的分析结果导出文件
 
 ## 快速开始
 
-### 编译
+### 环境要求
+- **C++编译器**：支持C++11标准（GCC 4.8+、MSVC 2015+、Clang 3.4+）
+- **Python环境**：Python 3.6+，包含tkinter库
+- **操作系统**：Windows 7+、Linux、macOS
+
+### 编译安装
+
+#### Windows (推荐使用MSYS2)
+```powershell
+cd Algorithm
+g++ -o lr_cli.exe lr_cli.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++11
+g++ -o lr_analyzer.exe main.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++11
+```
+
+#### Linux/macOS
 ```bash
-cd Algorithm            # 进入算法模块目录
-make                    # 编译交互式版本
-make lr_cli            # 编译命令行版本
-make clean             # 清理编译文件
+cd Algorithm
+make all
+# 或者手动编译
+g++ -o lr_cli lr_cli.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++11
+g++ -o lr_analyzer main.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++11
 ```
 
 ### 使用交互式版本

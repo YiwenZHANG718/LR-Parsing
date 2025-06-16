@@ -18,7 +18,7 @@
  * - JSON输出: ./lr_cli grammar.txt --table --json
  *
  * @author 语法分析课程设计
- * @date 2025
+ * @date 2025.6.11
  * @version 2.0
  */
 
@@ -30,6 +30,19 @@
 #include "grammar.h"
 #include "lr_analyzer.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#include <locale.h>
+#endif
+
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 /**
  * @brief 打印程序使用说明
  * @param program 程序名称
@@ -40,8 +53,8 @@ void printUsage(const char* program) {
     std::cout << "用法: " << program << " <文法文件> [选项]" << std::endl;
     std::cout << "选项:" << std::endl;
     std::cout << "  -t <类型>    分析器类型: lr0, slr1, lr1 (默认: slr1)" << std::endl;
-    std::cout << "  -i <输入文件>  要分析的输入串文件" << std::endl;
-    std::cout << "  -s <输入串>    要分析的输入串" << std::endl;
+    std::cout << "  -i <文件>    要分析的输入串文件" << std::endl;
+    std::cout << "  -s <字符串>  要分析的输入串" << std::endl;
     std::cout << "  --table      只显示分析表" << std::endl;
     std::cout << "  --items      只显示项目集族" << std::endl;
     std::cout << "  --json       以JSON格式输出" << std::endl;
@@ -169,6 +182,27 @@ void outputItemSets(LRAnalyzer* analyzer, bool json = false) {
  * - 1: 参数错误或操作失败
  */
 int main(int argc, char* argv[]) {
+#ifdef _WIN32
+    // 增强的Windows控制台UTF-8编码设置
+    SetConsoleOutputCP(65001);
+    SetConsoleCP(65001);
+    
+    // 启用虚拟终端处理
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+    
+    // 设置locale
+    setlocale(LC_ALL, "zh_CN.UTF-8");
+    
+    // 设置输入输出模式
+    _setmode(_fileno(stdout), _O_U8TEXT);
+    _setmode(_fileno(stdin), _O_U8TEXT);
+    _setmode(_fileno(stderr), _O_U8TEXT);
+#endif
+
     // 检查最少参数要求
     if (argc < 2) {
         printUsage(argv[0]);

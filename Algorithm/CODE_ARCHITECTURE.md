@@ -493,4 +493,349 @@ void LRAnalyzer::reportConflicts() const {
 - 增量更新减少重复输出
 - 异步处理提高响应性
 
-这种模块化的设计使得系统具有良好的可维护性和可扩展性，同时保证了算法实现的正确性和效率。
+## JSON接口设计
+
+### 1. 数据交换格式
+```cpp
+// JSON输出接口 - 供GUI调用
+class JSONExporter {
+public:
+    static string exportActionTable(const LRAnalyzer& analyzer) {
+        json result;
+        result["type"] = "action_table";
+        result["method"] = analyzer.getMethodName();
+        result["success"] = !analyzer.hasConflicts();
+        
+        json table;
+        for (const auto& entry : analyzer.getActionTable()) {
+            string key = to_string(entry.first.first) + "," + entry.first.second;
+            table[key] = entry.second;
+        }
+        result["table"] = table;
+        
+        if (analyzer.hasConflicts()) {
+            result["conflicts"] = exportConflicts(analyzer);
+        }
+        
+        return result.dump(4);
+    }
+    
+    static string exportParseSteps(const vector<ParseStep>& steps) {
+        json result;
+        result["type"] = "parse_steps";
+        result["steps"] = json::array();
+        
+        for (const auto& step : steps) {
+            json stepJson;
+            stepJson["step"] = step.stepNumber;
+            stepJson["stack"] = step.stateStack;
+            stepJson["symbols"] = step.symbolStack;
+            stepJson["input"] = step.remainingInput;
+            stepJson["action"] = step.action;
+            stepJson["description"] = step.description;
+            result["steps"].push_back(stepJson);
+        }
+        
+        return result.dump(4);
+    }
+};
+```
+
+### 2. GUI通信协议
+```cpp
+// 命令行接口统一输出格式
+class OutputFormatter {
+public:
+    enum OutputMode { TEXT, JSON, XML };
+    
+    static void setMode(OutputMode mode) { currentMode = mode; }
+    
+    static void outputResult(const LRAnalyzer& analyzer, const string& input = "") {
+        switch (currentMode) {
+            case JSON:
+                outputJSON(analyzer, input);
+                break;
+            case XML:
+                outputXML(analyzer, input);
+                break;
+            default:
+                outputText(analyzer, input);
+        }
+    }
+    
+private:
+    static OutputMode currentMode;
+    
+    static void outputJSON(const LRAnalyzer& analyzer, const string& input) {
+        json result;
+        result["grammar"] = analyzer.getGrammarJSON();
+        result["itemSets"] = analyzer.getItemSetsJSON();
+        result["actionTable"] = analyzer.getActionTableJSON();
+        result["gotoTable"] = analyzer.getGotoTableJSON();
+        
+        if (!input.empty()) {
+            result["parseResult"] = analyzer.parseStringJSON(input);
+        }
+        
+        cout << result.dump(4) << endl;
+    }
+};
+```
+
+## 扩展功能实现
+
+### 1. 语法制导翻译
+```cpp
+class SyntaxDirectedTranslator {
+    struct SemanticAction {
+        int productionId;
+        function<void(vector<any>&)> action;
+    };
+    
+    map<int, SemanticAction> semanticActions;
+    
+public:
+    void addAction(int prodId, function<void(vector<any>&)> action) {
+        semanticActions[prodId] = {prodId, action};
+    }
+    
+    any translateParse(const vector<string>& input, LRAnalyzer& analyzer) {
+        stack<any> semanticStack;
+        // ... 修改后的分析过程，在归约时执行语义动作
+        return semanticStack.top();
+    }
+};
+
+// 示例：算术表达式求值
+void setupArithmeticActions(SyntaxDirectedTranslator& translator) {
+    // E -> E + T 
+    translator.addAction(1, [](vector<any>& attrs) {
+        double right = any_cast<double>(attrs[2]);
+        double left = any_cast<double>(attrs[0]);
+        attrs.clear();
+        attrs.push_back(left + right);
+    });
+    
+    // T -> T * F
+    translator.addAction(3, [](vector<any>& attrs) {
+        double right = any_cast<double>(attrs[2]);
+        double left = any_cast<double>(attrs[0]);
+        attrs.clear();
+        attrs.push_back(left * right);
+    });
+}
+```
+
+### 2. 错误恢复机制
+```cpp
+class ErrorRecovery {
+public:
+    enum Strategy {
+        PANIC_MODE,      // 恐慌模式恢复
+        PHRASE_LEVEL,    // 短语级恢复
+        ERROR_PRODUCTION // 错误产生式
+    };
+    
+    struct RecoveryPoint {
+        int state;
+        string syncSymbol;
+        string errorMessage;
+    };
+    
+    bool recover(ParsingContext& context, Strategy strategy = PANIC_MODE) {
+        switch (strategy) {
+            case PANIC_MODE:
+                return panicModeRecovery(context);
+            case PHRASE_LEVEL:
+                return phraseLevelRecovery(context);
+            case ERROR_PRODUCTION:
+                return errorProductionRecovery(context);
+        }
+        return false;
+    }
+    
+private:
+    set<string> syncSymbols = {";", "}", ")", "end", "else"};
+    
+    bool panicModeRecovery(ParsingContext& context) {
+        // 跳过输入直到同步符号
+        while (!context.atEnd()) {
+            if (syncSymbols.count(context.currentSymbol())) {
+                return true;
+            }
+            context.advance();
+        }
+        return false;
+    }
+};
+```
+
+### 3. 分析表优化
+```cpp
+class TableOptimizer {
+public:
+    // 合并相似状态减少表大小
+    void mergeSimilarStates(LRAnalyzer& analyzer) {
+        auto& states = analyzer.getItemSets();
+        map<string, vector<int>> stateGroups;
+        
+        // 按核心项目分组
+        for (int i = 0; i < states.size(); i++) {
+            string coreSignature = states[i].getCoreSignature();
+            stateGroups[coreSignature].push_back(i);
+        }
+        
+        // 合并兼容状态
+        for (auto& group : stateGroups) {
+            if (group.second.size() > 1) {
+                mergeStates(analyzer, group.second);
+            }
+        }
+    }
+    
+    // 压缩稀疏表
+    void compressSparseTables(LRAnalyzer& analyzer) {
+        // 实现稀疏矩阵压缩算法
+        compressActionTable(analyzer);
+        compressGotoTable(analyzer);
+    }
+};
+```
+
+## 测试框架
+
+### 1. 单元测试
+```cpp
+class LRAnalyzerTest {
+public:
+    void runAllTests() {
+        testGrammarLoading();
+        testFirstFollowComputation();
+        testItemSetConstruction();
+        testTableConstruction();
+        testParsing();
+    }
+    
+private:
+    void testItemSetConstruction() {
+        Grammar g;
+        g.loadFromString("E -> E + T | T\nT -> T * F | F\nF -> ( E ) | id");
+        
+        LRAnalyzer analyzer(LR1);
+        analyzer.loadGrammar(g);
+        analyzer.constructParseTable();
+        
+        // 验证项目集数量和内容
+        assert(analyzer.getItemSetCount() == 12);
+        assert(!analyzer.hasConflicts());
+    }
+    
+    void testParsing() {
+        // 测试各种输入串
+        vector<string> inputs = {
+            {"id", "+", "id", "*", "id"},
+            {"(", "id", "+", "id", ")", "*", "id"},
+            {"id", "*", "(", "id", "+", "id", ")"}
+        };
+        
+        for (auto& input : inputs) {
+            assert(analyzer.parseString(input));
+        }
+    }
+};
+```
+
+### 2. 性能测试
+```cpp
+class PerformanceBenchmark {
+public:
+    void benchmarkConstruction() {
+        vector<string> grammarFiles = {
+            "simple_grammar.txt",
+            "medium_grammar.txt", 
+            "complex_grammar.txt"
+        };
+        
+        for (const string& file : grammarFiles) {
+            auto start = chrono::high_resolution_clock::now();
+            
+            LRAnalyzer analyzer(LR1);
+            analyzer.loadGrammar(file);
+            analyzer.constructParseTable();
+            
+            auto end = chrono::high_resolution_clock::now();
+            auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+            
+            cout << file << ": " << duration.count() << "ms" << endl;
+            cout << "状态数: " << analyzer.getItemSetCount() << endl;
+            cout << "内存使用: " << getMemoryUsage() << "KB" << endl;
+        }
+    }
+};
+```
+
+## 部署和分发
+
+### 1. 跨平台编译
+```bash
+# Windows (MSYS2/MinGW)
+g++ -std=c++17 -O2 *.cpp -o lr_analyzer.exe
+
+# Linux/macOS
+g++ -std=c++17 -O2 *.cpp -o lr_analyzer
+
+# 静态链接版本（便于分发）
+g++ -std=c++17 -O2 -static *.cpp -o lr_analyzer_static
+```
+
+### 2. 安装脚本
+```cpp
+// install.cpp - 自动化安装程序
+class Installer {
+public:
+    bool install(const string& targetDir) {
+        // 1. 检查系统环境
+        if (!checkSystemRequirements()) {
+            return false;
+        }
+        
+        // 2. 复制文件
+        if (!copyFiles(targetDir)) {
+            return false;
+        }
+        
+        // 3. 设置环境变量
+        if (!setupEnvironment(targetDir)) {
+            return false;
+        }
+        
+        // 4. 验证安装
+        return verifyInstallation(targetDir);
+    }
+    
+private:
+    bool checkSystemRequirements() {
+        // 检查编译器、Python版本等
+        return checkCompiler() && checkPython() && checkDiskSpace();
+    }
+};
+```
+
+## 项目维护
+
+### 1. 版本控制
+- 主版本号：重大架构变更
+- 次版本号：新功能添加
+- 修订版本号：错误修复和小改进
+
+### 2. 文档维护
+- API文档自动生成（Doxygen）
+- 用户手册定期更新
+- 示例代码验证
+
+### 3. 质量保证
+- 代码审查流程
+- 自动化测试集成
+- 性能回归测试
+
+这种模块化的设计使得系统具有良好的可维护性和可扩展性，同时保证了算法实现的正确性和效率。项目架构支持持续集成和持续部署，便于长期维护和功能扩展。

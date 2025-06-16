@@ -1,9 +1,6 @@
 /**
  * @file lr_item.cpp
  * @brief LR项目和项目集合的实现文件
- * @author LR语法分析器开发团队
- * @date 2024
- * @version 1.0
  *
  * 本文件实现了LR语法分析中的核心数据结构：
  * - LRItem: 表示一个LR项目，包含产生式、点位置和前瞻符号
@@ -15,6 +12,18 @@
 
 #include "lr_item.h"
 #include <iostream>
+
+#ifdef _WIN32
+#include <windows.h>
+// 设置控制台编码为UTF-8
+static bool initConsoleUTF8() {
+    SetConsoleOutputCP(65001);
+    SetConsoleCP(65001);
+    system("chcp 65001 >nul");
+    return true;
+}
+static bool utf8_initialized = initConsoleUTF8();
+#endif
 
 /**
  * @brief 比较两个LR项目是否相等

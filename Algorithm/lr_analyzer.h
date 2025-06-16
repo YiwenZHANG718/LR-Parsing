@@ -11,8 +11,9 @@
  * - 冲突检测和报告
  * - 语法分析过程的可视化
  *
- * @author 语法分析课程设计
- * @date 2025
+ * @author ZJJ
+ * @date 2025.6.10
+ * @version 2.2
  */
 
 #ifndef LR_ANALYZER_H
@@ -53,8 +54,8 @@ enum class ActionType {
  */
 struct Action {
     ActionType type;        ///< 动作类型
-    int value;             ///< 状态号（移进）或产生式号（归约）
-    Production production; ///< 用于归约的产生式
+    int value;              ///< 状态号（移进）或产生式号（归约）
+    Production production;  ///< 用于归约的产生式
 
     /**
      * @brief 默认构造函数，创建错误动作
@@ -111,13 +112,13 @@ class LRAnalyzer {
 private:
     // 核心数据结构
     Grammar grammar;                                            ///< 输入文法
-    std::vector<ItemSet> itemSets;                            ///< 项目集族
-    std::map<std::pair<int, std::string>, Action> actionTable; ///< ACTION表
-    std::map<std::pair<int, std::string>, int> gotoTable;     ///< GOTO表
-    std::vector<std::string> conflicts;                       ///< 冲突信息列表
+    std::vector<ItemSet> itemSets;                              ///< 项目集族
+    std::map<std::pair<int, std::string>, Action> actionTable;  ///< ACTION表
+    std::map<std::pair<int, std::string>, int> gotoTable;       ///< GOTO表
+    std::vector<std::string> conflicts;                         ///< 冲突信息列表
 
     // FIRST集相关
-    std::map<std::string, std::set<std::string>> firstSets;   ///< 所有符号的FIRST集
+    std::map<std::string, std::set<std::string>> firstSets;    ///< 所有符号的FIRST集
 
     /**
      * @brief 计算所有符号的FIRST集
@@ -173,34 +174,46 @@ private:
      * 使用经典算法构造完整的LR(0)项目集族（规范LR(0)项目集族）。
      */
     void constructLR0ItemSets();
-
-
-    // LR(1)项目集构造相关（简化版本）
+    // LR(1)项目集构造相关
     /**
-     * @brief 计算LR(1)项目集的闭包（简化版本）
+     * @brief 计算LR(1)项目集的闭包
      * @param items 输入项目集
      * @return 闭包后的项目集
      *
-     * 注意：当前实现是简化版本，实际上调用LR(0)的closure函数。
-     * 完整的LR(1)实现需要处理前瞻符号的传播。
+     * LR(1)闭包算法：
+     * 1. 将输入项目集中的所有项目加入闭包
+     * 2. 对闭包中的每个项目[A -> alpha·Beta, a]：
+     *    - 如果B是非终结符，计算FIRST(beta·a)
+     *    - 对B的每个产生式B -> gamma，将项目[B -> ·gamma, b]加入闭包
+     *      其中b属于FIRST(beta·a)
+     * 3. 重复步骤2直到闭包不再变化
      */
     ItemSet closureLR1(const ItemSet& items);
 
     /**
-     * @brief 计算LR(1)的GOTO转移函数（简化版本）
+     * @brief 计算LR(1)的GOTO转移函数
      * @param items 输入项目集
      * @param symbol 转移符号
      * @return 转移后的项目集
      *
-     * 注意：当前实现是简化版本，实际上调用LR(0)的gotoSet函数。
+     * LR(1) GOTO算法：
+     * 1. 从项目集中选择所有形如[A -> alpha·X·beta, a]的项目
+     * 2. 将它们转换为[A -> alpha·X·beta, a]（保持前瞻符号不变）
+     * 3. 对结果项目集求LR(1)闭包
      */
     ItemSet gotoSetLR1(const ItemSet& items, const std::string& symbol);
 
     /**
-     * @brief 构造LR(1)项目集族（简化版本）
+     * @brief 构造LR(1)项目集族
      *
-     * 注意：当前实现是简化版本，实际上使用LR(0)的项目集构造方法。
-     * 完整的LR(1)需要在项目中维护前瞻符号信息。
+     * LR(1)项目集族构造算法：
+     * 1. 构造初始项目集I0 = CLOSURE({[S' -> ·S, $]})
+     * 2. 对每个项目集Ii和每个符号X：
+     *    - 计算J = GOTO(Ii, X)
+     *    - 如果J非空且不在项目集族中，则加入项目集族
+     * 3. 重复步骤2直到不再产生新的项目集
+     *
+     * 与LR(0)的区别：每个项目都携带前瞻符号集合
      */
     void constructLR1ItemSets();
 
@@ -270,8 +283,6 @@ public:
      * - 最强大的LR方法
      * - 使用前瞻符号，冲突最少
      * - 项目集族可能很大
-     *
-     * 注意：当前实现是简化版本
      */
     bool constructLR1Table();
 
@@ -354,6 +365,23 @@ public:
      * @return 冲突信息列表的常量引用
      */
     const std::vector<std::string>& getConflicts() const { return conflicts; }
+
+    // 调试方法
+    /**
+     * @brief 调试用的公有方法，用于测试closureLR1
+     * @param items 输入项目集
+     * @return 闭包结果
+     */
+    ItemSet debugClosureLR1(const ItemSet& items) {
+        return closureLR1(items);
+    }
+
+    /**
+     * @brief 调试用的公有方法，用于计算FIRST集
+     */
+    void debugComputeFirstSets() {
+        computeFirstSets();
+    }
 };
 
 #endif // LR_ANALYZER_H

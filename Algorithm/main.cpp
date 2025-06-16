@@ -18,9 +18,9 @@
  * - 交互式实验
  * - 调试和测试
  *
- * @author 语法分析课程设计
+ * @author ZJJ
  * @date 2025
- * @version 2.0
+ * @version 1.0
  */
 
 #include <iostream>
@@ -29,6 +29,13 @@
 #include <sstream>
 #include "grammar.h"
 #include "lr_analyzer.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#include <locale.h>
+#endif
 
 /**
  * @brief 显示程序主菜单
@@ -86,6 +93,18 @@ std::vector<std::string> tokenizeInput(const std::string& input) {
  * - analyzer: 当前使用的分析器实例
  */
 int main() {
+#ifdef _WIN32
+    // 设置Windows控制台为UTF-8模式
+    SetConsoleOutputCP(65001);
+    SetConsoleCP(65001);
+    
+    // 设置C locale
+    setlocale(LC_ALL, ".UTF8");
+    
+    // 强制切换到UTF-8编码页并设置环境
+    system("chcp 65001 >nul 2>&1");
+#endif
+
     // 初始化程序状态
     Grammar grammar;                    // 文法对象
     LRAnalyzer* analyzer = nullptr;     // 分析器指针

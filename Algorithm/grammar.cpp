@@ -12,6 +12,23 @@
 #include <iostream>
 #include <algorithm>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#include <locale.h>
+
+// 设置控制台编码为UTF-8
+static bool initConsoleUTF8() {
+    SetConsoleOutputCP(65001);
+    SetConsoleCP(65001);
+    setlocale(LC_ALL, ".UTF8");
+    system("chcp 65001 >nul 2>&1");
+    return true;
+}
+static bool utf8_initialized = initConsoleUTF8();
+#endif
+
 // 全局静默模式控制变量
 bool g_silent_mode = false;
 
@@ -187,10 +204,18 @@ void Grammar::extractSymbols() {
  *      E -> E + T | T
  */
 void Grammar::augment() {
+    // 检查是否已经增广过（开始符号以单引号结尾）
+    if (startSymbol.back() == '\'') {
+        return; // 已经增广过，不需要重复增广
+    }
+    
     std::string newStart = startSymbol + "'";
     productions.insert(productions.begin(), Production(newStart, { startSymbol }));
     nonterminals.insert(newStart);
     startSymbol = newStart;
+    
+    // 添加$符号到终结符集合（表示输入结束）
+    terminals.insert("$");
 }
 
 /**

@@ -9,8 +9,9 @@
  * - 文法的增广（添加新的开始符号）
  * - 终结符和非终结符的自动识别
  *
- * @author 语法分析课程设计
- * @date 2025
+ * @author ZJJ
+ * @date 2025.6.9
+ * @version 1.2
  */
 
 #ifndef GRAMMAR_H
@@ -50,7 +51,7 @@ public:
      * @param r 产生式右部
      */
     Production(const std::string& l, const std::vector<std::string>& r)
-        : left(l), right(r) {}
+    : left(l), right(r) {}
 
     /**
      * @brief 比较两个产生式是否相等

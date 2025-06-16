@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file lr_analyzer.cpp
  * @brief LR语法分析器的实现文件
  *
@@ -295,8 +295,9 @@ void LRAnalyzer::constructLR0ItemSets() {
     itemSets.clear();
 
     // 构造初始项目集I₀
-    LRItem startItem(grammar.getStartSymbol(),
-        grammar.getProductions()[0].right, 0);
+    // 增广后的起始产生式是第0个产生式：S' -> S
+    LRItem startItem(grammar.getProductions()[0].left,
+                    grammar.getProductions()[0].right, 0);
     ItemSet I0 = closure(ItemSet({ startItem }));
     I0.id = 0;
     itemSets.push_back(I0);
@@ -360,13 +361,18 @@ void LRAnalyzer::constructActionGotoTable(bool isLR1) {
     conflicts.clear();
 
     for (size_t i = 0; i < itemSets.size(); ++i) {
-        for (const auto& item : itemSets[i].items) {
-            if (!item.isReduceItem()) {
+        for (const auto& item : itemSets[i].items) {            if (!item.isReduceItem()) {
                 // 处理移进和GOTO动作
                 std::string nextSymbol = item.getNextSymbol();
                 if (grammar.getTerminals().count(nextSymbol)) {
                     // 移进动作：ACTION[i, a] = shift j
-                    ItemSet gotoResult = gotoSet(itemSets[i], nextSymbol);
+                    ItemSet gotoResult;
+                    if (isLR1) {
+                        gotoResult = gotoSetLR1(itemSets[i], nextSymbol);
+                    } else {
+                        gotoResult = gotoSet(itemSets[i], nextSymbol);
+                    }
+                    
                     for (size_t j = 0; j < itemSets.size(); ++j) {
                         if (itemSets[j] == gotoResult) {
                             auto key = std::make_pair(i, nextSymbol);
@@ -384,7 +390,13 @@ void LRAnalyzer::constructActionGotoTable(bool isLR1) {
                 }
                 // GOTO动作：GOTO[i, A] = j
                 else if (grammar.getNonterminals().count(nextSymbol)) {
-                    ItemSet gotoResult = gotoSet(itemSets[i], nextSymbol);
+                    ItemSet gotoResult;
+                    if (isLR1) {
+                        gotoResult = gotoSetLR1(itemSets[i], nextSymbol);
+                    } else {
+                        gotoResult = gotoSet(itemSets[i], nextSymbol);
+                    }
+                    
                     for (size_t j = 0; j < itemSets.size(); ++j) {
                         if (itemSets[j] == gotoResult) {
                             gotoTable[std::make_pair(i, nextSymbol)] = j;
@@ -472,6 +484,8 @@ bool LRAnalyzer::constructLR0Table() {
     if (!g_silent_mode) {
         std::cout << "构造LR(0)分析表..." << std::endl;
     }
+    // 增广文法（添加S' -> S）
+    const_cast<Grammar&>(grammar).augment();
     constructLR0ItemSets();
     constructActionGotoTable(false);
     return conflicts.empty();
@@ -491,6 +505,8 @@ bool LRAnalyzer::constructSLR1Table() {
     if (!g_silent_mode) {
         std::cout << "构造SLR(1)分析表..." << std::endl;
     }
+    // 增广文法（添加S' -> S）
+    const_cast<Grammar&>(grammar).augment();
     computeFirstSets();
     computeFollowSets();
     constructLR0ItemSets();
@@ -512,6 +528,8 @@ bool LRAnalyzer::constructLR1Table() {
     if (!g_silent_mode) {
         std::cout << "构造LR(1)分析表..." << std::endl;
     }
+    // 增广文法（添加S' -> S）
+    const_cast<Grammar&>(grammar).augment();
     computeFirstSets();
     computeFollowSets();
     constructLR1ItemSets();
@@ -519,31 +537,235 @@ bool LRAnalyzer::constructLR1Table() {
     return conflicts.empty();
 }
 
-// LR(1)项目集构造（简化版本）
+// LR(1)项目集构造（完整实现）
+/**
+ * @brief 计算LR(1)项目集的闭包
+ * @param items 输入的LR(1)项目集
+ * @return LR(1)闭包后的项目集
+ *
+ * LR(1)闭包算法：
+ * 1. 将输入项目集中的所有项目加入闭包
+ * 2. 对闭包中的每个项目[A → α·Bβ, a]：
+ *    - 如果B是非终结符，则对B的每个产生式B → γ
+ *    - 计算FIRST(βa)，对其中每个终结符b
+ *    - 将项目[B → ·γ, b]加入闭包（如果尚未存在或需要合并前瞻符号）
+ * 3. 重复步骤2直到闭包不再变化
+ * 
+ * 与LR(0)闭包的区别：
+ * - 每个项目都携带前瞻符号集合
+ * - 新增项目的前瞻符号通过FIRST(βa)计算得出
+ * - 需要处理前瞻符号的合并
+ */
 ItemSet LRAnalyzer::closureLR1(const ItemSet& items) {
-    // 这里是简化的LR(1) closure实现
-    // 完整实现需要处理前瞻符号的传播
-    return closure(items);
+    std::set<LRItem> closure;
+    std::queue<LRItem> workList;
+
+    // 首先确保所有输入项目都有前瞻符号
+    for (const auto& item : items.items) {
+        closure.insert(item);
+        workList.push(item);
+    }
+
+    while (!workList.empty()) {
+        LRItem currentItem = workList.front();
+        workList.pop();
+
+        // 如果项目不是归约项目（点号不在最后）
+        if (!currentItem.isReduceItem()) {
+            std::string nextSymbol = currentItem.getNextSymbol();
+            // 如果下一个符号是非终结符
+            if (grammar.getNonterminals().count(nextSymbol)) {
+                // 计算beta：点后面除了nextSymbol之外的符号序列
+                std::vector<std::string> beta;
+                if (currentItem.dotPos + 1 < currentItem.right.size()) {
+                    beta.assign(currentItem.right.begin() + currentItem.dotPos + 1, 
+                               currentItem.right.end());
+                }
+
+                // 对于每个前瞻符号，计算FIRST(beta·lookahead)
+                std::set<std::string> newLookaheads;
+                for (const auto& lookahead : currentItem.lookaheads) {
+                    std::vector<std::string> betaLookahead = beta;
+                    betaLookahead.push_back(lookahead);
+                    std::set<std::string> firstSet = getFirst(betaLookahead);
+                    newLookaheads.insert(firstSet.begin(), firstSet.end());
+                }
+
+                // 为该非终结符的每个产生式创建新项目
+                for (const auto& prod : grammar.getProductions()) {
+                    if (prod.left == nextSymbol) {
+                        // 创建新项目，带有计算出的前瞻符号
+                        LRItem newItem(prod.left, prod.right, 0, newLookaheads);
+                        
+                        // 查找是否已存在相同核心的项目
+                        bool found = false;
+                        LRItem* existingItem = nullptr;
+                        for (auto it = closure.begin(); it != closure.end(); ++it) {
+                            if (it->left == newItem.left && 
+                                it->right == newItem.right && 
+                                it->dotPos == newItem.dotPos) {
+                                existingItem = const_cast<LRItem*>(&(*it));
+                                found = true;
+                                break;
+                            }
+                        }
+                        
+                        if (found) {
+                            // 合并前瞻符号
+                            std::set<std::string> oldLookaheads = existingItem->lookaheads;
+                            std::set<std::string> mergedLookaheads = oldLookaheads;
+                            mergedLookaheads.insert(newLookaheads.begin(), newLookaheads.end());
+                            
+                            // 如果前瞻符号有变化，更新项目并加入工作列表
+                            if (mergedLookaheads != oldLookaheads) {
+                                // 从closure中删除旧项目
+                                closure.erase(*existingItem);
+                                // 创建合并后的项目
+                                LRItem mergedItem(newItem.left, newItem.right, newItem.dotPos, mergedLookaheads);
+                                closure.insert(mergedItem);
+                                workList.push(mergedItem);
+                            }
+                        } else {
+                            // 新项目，直接添加
+                            closure.insert(newItem);
+                            workList.push(newItem);
+                        }
+                    }
+                }
+            }
+        }
+    }    return ItemSet(closure);
 }
 
+/**
+ * @brief 计算LR(1)的GOTO函数
+ * @param items 输入的LR(1)项目集
+ * @param symbol 转移符号
+ * @return 转移后的LR(1)项目集
+ *
+ * LR(1) GOTO算法：
+ * 1. 从项目集I中选择所有形如[A → α·Xβ, a]的项目（其中X等于symbol）
+ * 2. 将它们转换为[A → αX·β, a]（保持前瞻符号不变）
+ * 3. 对结果项目集求LR(1)闭包
+ * 
+ * 与LR(0) GOTO的区别：
+ * - 需要保持每个项目的前瞻符号集合
+ * - 使用LR(1)闭包而不是LR(0)闭包
+ */
 ItemSet LRAnalyzer::gotoSetLR1(const ItemSet& items, const std::string& symbol) {
-    // 这里是简化的LR(1) goto实现
-    return gotoSet(items, symbol);
+    std::set<LRItem> gotoItems;
+
+    // 查找所有可以通过symbol转移的项目
+    for (const auto& item : items.items) {
+        if (!item.isReduceItem() && item.getNextSymbol() == symbol) {
+            // 创建点号向前移动一位的新项目，保持前瞻符号
+            LRItem newItem(item.left, item.right, item.dotPos + 1, item.lookaheads);
+            gotoItems.insert(newItem);
+        }
+    }    // 如果没有可转移的项目，返回空集
+    if (gotoItems.empty()) {
+        return ItemSet();
+    }
+
+    // 对转移后的项目集求LR(1)闭包
+    return closureLR1(ItemSet(gotoItems));
 }
 
+/**
+ * @brief 构造LR(1)项目集族
+ *
+ * LR(1)项目集族构造算法：
+ * 1. 构造初始项目集I₀ = CLOSURE({[S' → ·S, $]})
+ * 2. 对每个项目集Iᵢ和每个符号X：
+ *    - 计算J = GOTO(Iᵢ, X)（使用LR(1)的GOTO函数）
+ *    - 如果J非空且不在项目集族中，则加入项目集族
+ * 3. 重复步骤2直到不再产生新的项目集
+ * 
+ * 与LR(0)项目集族的区别：
+ * - 初始项目包含前瞻符号$
+ * - 使用LR(1)的GOTO和闭包函数
+ * - 项目集大小可能显著增加（状态爆炸）
+ * - 每个项目都携带精确的前瞻符号信息
+ */
 void LRAnalyzer::constructLR1ItemSets() {
-    // 简化版本，实际上使用LR(0)的构造方法
-    // 完整的LR(1)需要在项目中携带前瞻符号
-    constructLR0ItemSets();
+    itemSets.clear();
+
+    // 构造初始项目集I₀，包含增广文法的起始项目和前瞻符号$
+    // 增广后的起始产生式是第0个产生式：S' -> S
+    std::set<std::string> initialLookahead = {"$"};
+    LRItem startItem(grammar.getProductions()[0].left,
+                    grammar.getProductions()[0].right, 0, initialLookahead);
+    ItemSet I0 = closureLR1(ItemSet({startItem}));
+    I0.id = 0;
+    itemSets.push_back(I0);
+
+    // 使用工作列表算法构造所有项目集
+    std::queue<int> workList;
+    workList.push(0);
+
+    while (!workList.empty()) {
+        int currentIndex = workList.front();
+        workList.pop();
+
+        // 获取所有符号（终结符和非终结符）
+        std::set<std::string> symbols = grammar.getTerminals();
+        symbols.insert(grammar.getNonterminals().begin(),
+                      grammar.getNonterminals().end());
+
+        // 对每个符号计算GOTO
+        for (const auto& symbol : symbols) {
+            ItemSet gotoResult = gotoSetLR1(itemSets[currentIndex], symbol);
+
+            if (!gotoResult.items.empty()) {
+                // 检查是否已存在相同的项目集
+                bool found = false;
+                for (size_t i = 0; i < itemSets.size(); ++i) {
+                    if (itemSets[i] == gotoResult) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                // 如果是新的项目集，添加到项目集族中
+                if (!found) {
+                    gotoResult.id = itemSets.size();
+                    itemSets.push_back(gotoResult);
+                    workList.push(gotoResult.id);
+                }
+            }
+        }    }
 }
 
+/**
+ * @brief 打印项目集族
+ *
+ * 输出所有构造的项目集，包括：
+ * - 项目集编号
+ * - 每个项目集中的所有项目
+ * - LR(1)项目的前瞻符号（如果适用）
+ * 
+ * 输出格式便于调试和理解分析器的内部状态
+ */
 void LRAnalyzer::printItemSets() const {
     std::cout << "\n项目集族：" << std::endl;
     for (const auto& itemSet : itemSets) {
-        itemSet.print();
-    }
+        itemSet.print();    }
 }
 
+/**
+ * @brief 打印ACTION表
+ *
+ * 以表格形式输出ACTION分析表：
+ * - 行：状态编号（0到n-1）
+ * - 列：终结符和结束符$
+ * - 内容：动作类型
+ *   - s<n>：移进到状态n
+ *   - r<n>：用第n个产生式归约
+ *   - acc：接受
+ *   - 空白：错误（隐式）
+ * 
+ * 表格帮助用户理解分析器在各状态下对各输入符号的动作
+ */
 void LRAnalyzer::printActionTable() const {
     std::cout << "\nACTION表：" << std::endl;
     std::cout << "状态\t";
@@ -567,10 +789,22 @@ void LRAnalyzer::printActionTable() const {
         if (actionTable.count(key)) {
             std::cout << actionTable.at(key).toString();
         }
-        std::cout << std::endl;
-    }
+        std::cout << std::endl;    }
 }
 
+/**
+ * @brief 打印GOTO表
+ *
+ * 以表格形式输出GOTO分析表：
+ * - 行：状态编号（0到n-1）
+ * - 列：非终结符
+ * - 内容：目标状态编号
+ * 
+ * GOTO表定义了分析器在归约后应该转移到的状态：
+ * - 当执行归约A→α后，弹出|α|个状态
+ * - 查看栈顶状态和归约得到的非终结符A
+ * - 根据GOTO[state, A]确定新的状态
+ */
 void LRAnalyzer::printGotoTable() const {
     std::cout << "\nGOTO表：" << std::endl;
     std::cout << "状态\t";
@@ -590,10 +824,24 @@ void LRAnalyzer::printGotoTable() const {
                 std::cout << "\t";
             }
         }
-        std::cout << std::endl;
-    }
+        std::cout << std::endl;    }
 }
 
+/**
+ * @brief 打印冲突信息
+ *
+ * 输出分析表构造过程中检测到的所有冲突：
+ * - 移进/归约冲突：同一状态下对同一符号既可移进又可归约
+ * - 归约/归约冲突：同一状态下对同一符号可用多个产生式归约
+ * 
+ * 冲突信息包括：
+ * - 冲突类型
+ * - 发生冲突的状态
+ * - 冲突符号
+ * - 具体的冲突动作
+ * 
+ * 如果无冲突，显示文法是LR的确认信息
+ */
 void LRAnalyzer::printConflicts() const {
     if (conflicts.empty()) {
         std::cout << "\n✓ 无冲突，文法是LR的" << std::endl;
@@ -602,10 +850,24 @@ void LRAnalyzer::printConflicts() const {
         std::cout << "\n✗ 检测到冲突：" << std::endl;
         for (const auto& conflict : conflicts) {
             std::cout << "  " << conflict << std::endl;
-        }
-    }
+        }    }
 }
 
+/**
+ * @brief 以JSON格式打印ACTION表
+ *
+ * 输出结构化的ACTION表数据，格式为：
+ * {
+ *   "state": {
+ *     "symbol": "action",
+ *     ...
+ *   },
+ *   ...
+ * }
+ * 
+ * 用于程序间通信，特别是GUI界面的数据显示
+ * 只输出有定义动作的表项，空项被省略
+ */
 void LRAnalyzer::printActionTableJSON() const {
     bool first_state = true;
     for (size_t i = 0; i < itemSets.size(); ++i) {
@@ -625,10 +887,24 @@ void LRAnalyzer::printActionTableJSON() const {
             }
         }
         std::cout << "}";
-        first_state = false;
-    }
+        first_state = false;    }
 }
 
+/**
+ * @brief 以JSON格式打印GOTO表
+ *
+ * 输出结构化的GOTO表数据，格式为：
+ * {
+ *   "state": {
+ *     "nonterminal": target_state,
+ *     ...
+ *   },
+ *   ...
+ * }
+ * 
+ * 用于程序间通信和数据交换
+ * 只输出有定义转移的表项，空项被省略
+ */
 void LRAnalyzer::printGotoTableJSON() const {
     bool first_state = true;
     for (size_t i = 0; i < itemSets.size(); ++i) {
@@ -645,10 +921,28 @@ void LRAnalyzer::printGotoTableJSON() const {
             }
         }
         std::cout << "}";
-        first_state = false;
-    }
+        first_state = false;    }
 }
 
+/**
+ * @brief 以JSON格式打印项目集族
+ *
+ * 输出结构化的项目集数据，格式为：
+ * [
+ *   {
+ *     "id": set_number,
+ *     "items": ["item1", "item2", ...]
+ *   },
+ *   ...
+ * ]
+ * 
+ * 每个项目以字符串形式表示，包含：
+ * - 产生式内容
+ * - 点号位置
+ * - 前瞻符号（LR(1)情况下）
+ * 
+ * 用于GUI显示和数据分析
+ */
 void LRAnalyzer::printItemSetsJSON() const {
     bool first_set = true;
     for (const auto& itemSet : itemSets) {
@@ -662,10 +956,27 @@ void LRAnalyzer::printItemSetsJSON() const {
             first_item = false;
         }
         std::cout << "]}";
-        first_set = false;
-    }
+        first_set = false;    }
 }
 
+/**
+ * @brief 执行LR语法分析
+ * @param input 输入的token序列
+ * @return 如果分析成功返回true，否则返回false
+ *
+ * LR分析算法：
+ * 1. 初始化：状态栈push(0)，符号栈为空，输入末尾添加$
+ * 2. 重复以下步骤直到接受或错误：
+ *    a) 根据当前状态和输入符号查ACTION表
+ *    b) 执行相应动作：
+ *       - 移进：push新状态和输入符号，移动输入指针
+ *       - 归约：pop产生式右部长度个状态和符号，push产生式左部，查GOTO表push新状态
+ *       - 接受：分析成功
+ *       - 错误：分析失败
+ * 3. 输出详细的分析过程，包括每步的状态栈、符号栈、剩余输入和执行动作
+ * 
+ * 分析过程的可视化输出帮助理解LR分析器的工作原理
+ */
 bool LRAnalyzer::parse(const std::vector<std::string>& input) {
     if (itemSets.empty()) {
         std::cout << "错误：分析表未构造" << std::endl;
