@@ -1,0 +1,8 @@
+# 移进-归约冲突文法
+# 经典的悬空else问题，会产生移进/归约冲突
+
+S -> if E then S else S
+S -> if E then S
+S -> id = E
+E -> id
+E -> num

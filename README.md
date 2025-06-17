@@ -30,10 +30,14 @@ LR/                                    # 项目根目录
 │   ├── grammar.h                      # 文法相关类声明
 │   ├── main.cpp                       # 交互式主程序入口
 │   ├── lr_cli.cpp                     # 命令行接口程序（支持JSON输出）
-│   ├── Makefile                       # 算法模块构建配置
-│   ├── lr_cli                        # 编译生成的命令行可执行文件
+│   ├── build.bat                      # Windows自动化构建脚本（UTF-8支持）
+│   ├── Makefile                       # 跨平台构建配置
+│   ├── lr_analyzer(.exe)              # 交互式可执行文件
+│   ├── lr_cli(.exe)                   # 命令行可执行文件
 │   ├── ALGORITHM_DETAILS.md           # LR算法详细技术说明
-│   └── CODE_ARCHITECTURE.md           # 代码架构和模块间关系文档
+│   ├── CODE_ARCHITECTURE.md           # 代码架构和模块间关系文档
+│   ├── LR_CLI_DOCUMENTATION.md        # 命令行工具完整使用文档
+│   └── LR1_DEVELOPMENT_ISSUES.md      # LR(1)开发问题与解决方案记录
 │
 ├── GUI/                              # 图形用户界面模块
 │   ├── GUI.py                        # 主GUI程序（完整中文界面、表格显示）
@@ -41,10 +45,16 @@ LR/                                    # 项目根目录
 │   ├── GUI_IMPLEMENTATION_DETAILS.md # GUI功能实现技术细节
 │   └── GUI_USER_GUIDE.md             # GUI使用指南和最佳实践
 │
-├── TestGrammar/                      # 测试文法集合
-│   ├── *_grammar.txt                         # 各种测试文法文件
-│   └── *_export.txt                  # 分析结果导出示例
+├── TestGrammar/                      # 测试文法集合与自动化测试
+│   ├── *_grammar.txt                 # 各种测试文法文件（表达式、条件语句、if-else等）
+│   ├── FaultGrammar/                 # 错误文法测试集合
+│   │   └── *.txt                     # 错误类型测试
+│   ├── test_all_grammars.sh          # Linux/macOS自动化测试脚本
+│   ├── TestGrammar/test_results.log  # 测试日志文件（运行后生成）
+│   └── README.md                     # 测试用例说明文档
 │
+├── BACKEND_UNRESOLVED_ISSUES.md      # 后端开发未解决问题记录
+├── SOFTWARE_DIVISION_AND_VERSION_HISTORY.md  # 团队分工与版本历史
 └── README.md                         # 项目主要说明文档（本文件）
 ```
 
@@ -56,8 +66,9 @@ LR/                                    # 项目根目录
 - **grammar.cpp/h**：文法表示、FIRST/FOLLOW集计算实现
 - **main.cpp**：交互式主程序入口
 - **lr_cli.cpp**：命令行接口程序（支持JSON输出）
-- **Makefile**：算法模块构建配置
-- **lr_cli**：编译生成的命令行可执行文件
+- **build.bat**：Windows自动化构建脚本（UTF-8支持）
+- **Makefile**：跨平台构建配置
+- **lr_analyzer.exe/lr_cli.exe**：编译生成的可执行文件
 - **ALGORITHM_DETAILS.md**：LR算法详细技术说明
 - **CODE_ARCHITECTURE.md**：代码架构和模块间关系文档
 - **LR_CLI_DOCUMENTATION.md**：命令行工具完整使用文档
@@ -69,9 +80,23 @@ LR/                                    # 项目根目录
 - **GUI_IMPLEMENTATION_DETAILS.md**：GUI功能实现技术细节
 - **GUI_USER_GUIDE.md**：GUI使用指南和最佳实践
 
-#### TestGrammar/ - 测试用例
-- **文法文件**：包含各种复杂度和特性的测试文法
-- **导出示例**：完整的分析结果导出文件
+#### TestGrammar/ - 测试用例与自动化测试
+- **测试文法文件**：包含各种复杂度和特性的测试文法
+  - expression_grammar.txt：表达式语法测试
+  - conditional_grammar.txt：条件语句语法测试  
+  - if_else_language_grammar.txt：完整if-else语言测试
+  - assignment_grammar.txt：赋值语句测试
+  - complex_grammar.txt：复杂语法结构测试
+- **FaultGrammar/**：错误文法测试集合
+  - ambiguous.txt：二义性文法测试
+  - left_recursive.txt：左递归文法测试
+  - circular_dependency.txt：循环依赖测试
+  - reduce_reduce_conflict.txt：归约-归约冲突测试
+- **自动化测试脚本**：
+  - test_all_grammars.sh：Linux/macOS全面测试脚本
+  - test_simple.bat：Windows简化测试脚本
+  - test_utf8_simple.bat：Windows UTF-8测试脚本
+- **README.md**：测试用例详细说明
 
 ## 快速开始
 
@@ -82,11 +107,27 @@ LR/                                    # 项目根目录
 
 ### 编译安装
 
-#### Windows (推荐使用MSYS2)
+#### Windows (推荐使用MSYS2或MinGW)
 ```powershell
 cd Algorithm
-g++ -o lr_cli.exe lr_cli.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++11
-g++ -o lr_analyzer.exe main.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++11
+# 使用自动化构建脚本（推荐）
+.\build.bat
+
+# 或者手动编译
+g++ -o lr_cli.exe lr_cli.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++17 -Wall -Wextra
+g++ -o lr_analyzer.exe main.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++17 -Wall -Wextra
+```
+
+#### 自动化测试
+```bash
+# Windows
+cd TestGrammar
+.\test_utf8_simple.bat
+
+# Linux/macOS  
+cd TestGrammar
+chmod +x test_all_grammars.sh
+./test_all_grammars.sh
 ```
 
 #### Linux/macOS
@@ -94,8 +135,35 @@ g++ -o lr_analyzer.exe main.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++
 cd Algorithm
 make all
 # 或者手动编译
-g++ -o lr_cli lr_cli.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++11
-g++ -o lr_analyzer main.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++11
+g++ -o lr_cli lr_cli.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++17 -Wall -Wextra
+g++ -o lr_analyzer main.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++17 -Wall -Wextra
+```
+
+### 快速测试 - if-else语句支持验证
+
+本项目完全支持if-else语句的语法分析。可以通过以下方式快速验证：
+
+#### 使用自动化测试脚本
+```bash
+# Windows - UTF-8支持的测试脚本
+cd TestGrammar
+.\test_utf8_simple.bat
+
+# 将看到如下输出：
+# [1/3] 测试条件语句语法...
+# SUCCESS: 条件语句语法构造成功
+# [2/3] 测试if-else语言语法...  
+# SUCCESS: if-else语言语法构造成功
+```
+
+#### 手动测试if-else语句
+```bash
+# 测试简单条件语句
+cd Algorithm
+.\lr_cli.exe ..\TestGrammar\conditional_grammar.txt -t slr1 -s "if id then id = num else id = num"
+
+# 测试复杂if-else语言
+.\lr_cli.exe ..\TestGrammar\if_else_language_grammar.txt -t slr1 -s "if ( id > number ) { id = number ; }"
 ```
 
 ### 使用交互式版本
@@ -491,30 +559,7 @@ def safe_read_file(file_path):
             return f.read()
 ```
 
-### 5. "显示项目集"按钮功能修复
-
-**问题描述：** 
-- 原来的"显示项目集"按钮只是切换到项目集标签页，但没有实际获取项目集数据
-- 用户点击按钮后看不到任何项目集内容
-
-**修复方案：**
-- 重新实现了 `show_item_sets()` 方法
-- 添加了 `_show_item_sets_worker()` 工作线程
-- 添加了 `_update_item_sets_results()` 结果更新方法
-- 现在点击按钮会：
-  1. 保存当前文法到临时文件
-  2. 调用C++后端获取项目集JSON数据
-  3. 解析JSON并显示在项目集标签页
-  4. 自动切换到项目集标签页显示结果
-
-**验证结果：**
-```bash
-cd /home/zjj1551/LR
-./lr_cli test_grammar.txt -t slr1 --items --json
-# 输出包含12个项目集的JSON数据
-```
-
-### 6. 运行 `python main.py` 时没有任何输出，GUI窗口无法显示，程序看似挂起。
+### 5. 运行 `python main.py` 时没有任何输出，GUI窗口无法显示，程序看似挂起。
 
 **问题描述**: 通过详细的调试过程发现问题出现在原始GUI代码中：
 
@@ -546,3 +591,81 @@ cd /home/zjj1551/LR
 ✅ **已完全解决**: 程序现在可以正常启动和运行
 
 这些问题的解决过程体现了软件工程中常见的**编码兼容性**、**系统集成**、**用户界面设计**和**项目管理**等关键技术领域的实践经验。
+
+## 版本历史
+
+本项目采用迭代式开发模型，版本更新遵循语义化版本控制。详细的版本历史和开发进程请参见 [SOFTWARE_DIVISION_AND_VERSION_HISTORY.md](SOFTWARE_DIVISION_AND_VERSION_HISTORY.md)。
+
+### 主要版本里程碑
+
+| 版本 | 发布时间 | 主要特性 | 开发者 |
+|------|----------|----------|--------|
+| **v1.0.0** | 2025.6.9-6.11 | 核心LR算法实现，基础架构建立 | 算法组 + 后端组 |
+| **v1.1.0** | 2025.6.11 | 文件输入支持，测试增强 | 后端组 |
+| **v2.0.0** | 2025.6.12 | 图形界面引入，前后端分离 | GUI组 + 后端组 |
+| **v2.1.0** | 2025.6.14 | 跨平台兼容性实现 | 全体开发组 |
+| **v2.2.0** | 2025.6.16-6.17 | **测试框架与自动化脚本** | **后端组** |
+| **v2.3.0** | 2025.6.18 | LR(1)算法完整实现 | 算法组 |
+| **v3.0.0** | 2025.6.19 | 错误恢复与诊断增强 | 全体开发组 |
+| **v3.1.0** | 2025.6.21 | 系统完善与文档化 | 全体开发组 |
+
+### 当前版本特性
+
+- ✅ **完整的LR分析器**: 支持LR(0)、SLR(1)、LR(1)三种算法
+- ✅ **if-else语句支持**: 完全支持条件语句和复杂if-else语言结构  
+- ✅ **跨平台构建**: Windows、Linux、macOS全平台支持
+- ✅ **UTF-8编码**: 完美的中文字符支持
+- ✅ **自动化测试**: 完整的测试框架和批处理脚本
+- ✅ **图形化界面**: Python Tkinter用户友好界面
+- ✅ **命令行工具**: 强大的CLI接口，支持脚本调用
+
+## 团队信息
+
+### 开发团队分工
+
+本项目采用模块化开发模式，团队分为三个专业开发组：
+
+1. **🎨 图形用户界面 (GUI) 开发组 (1人)**
+   - 负责Python Tkinter界面设计与实现
+   - 用户交互逻辑和可视化展示
+   - 跨平台界面兼容性
+
+2. **🧮 核心分析算法开发组 (1人)**  
+   - LR(0)、SLR(1)、LR(1)算法核心实现
+   - 分析表构造和冲突检测
+   - 算法性能优化
+
+3. **⚙️ 后端基础及命令行接口 (CLI) 开发组 (1人)**
+   - 文法数据结构和解析逻辑
+   - 命令行接口和JSON数据交换
+   - 跨平台构建脚本和自动化测试框架
+   - **测试用例设计和批处理脚本开发**
+
+### 技术栈
+
+- **后端**: C++17, STL, JSON
+- **前端**: Python 3.6+, Tkinter
+- **构建**: Make, 批处理脚本
+- **测试**: 自动化测试框架
+- **文档**: Markdown, 中英文双语
+
+### 项目管理
+
+- **版本控制**: Git语义化版本管理
+- **质量保证**: 单元测试 + 集成测试 + 用户验收
+- **文档标准**: 完整的技术文档和用户指南
+- **持续集成**: 多平台自动化构建和测试
+
+---
+
+**📧 联系方式**: 项目技术支持和问题反馈  
+**📄 许可证**: MIT License  
+**📅 最后更新**: 2025年6月17日  
+**🏷️ 当前版本**: v3.1.1
+
+**🔗 相关文档**:
+- [团队分工与版本历史详细说明](SOFTWARE_DIVISION_AND_VERSION_HISTORY.md)
+- [LR算法技术详细说明](Algorithm/ALGORITHM_DETAILS.md)
+- [GUI设计架构文档](GUI/GUI_DESIGN_ARCHITECTURE.md)
+- [命令行工具使用文档](Algorithm/LR_CLI_DOCUMENTATION.md)
+- [测试用例说明](TestGrammar/README.md)

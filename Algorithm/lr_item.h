@@ -16,8 +16,8 @@
  * 通过计算项目集的闭包和GOTO函数，可以构造LR分析表。
  *
  * @author ZJJ
- * @date 2025.6.10
- * @version 2.0
+ * @date 2025.6.18
+ * @version 2.3
  */
 
 #ifndef LR_ITEM_H

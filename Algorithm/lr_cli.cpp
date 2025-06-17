@@ -18,8 +18,8 @@
  * - JSON输出: ./lr_cli grammar.txt --table --json
  *
  * @author 语法分析课程设计
- * @date 2025.6.11
- * @version 2.0
+ * @date 2025.6.18
+ * @version 2.3
  */
 
 #include <iostream>

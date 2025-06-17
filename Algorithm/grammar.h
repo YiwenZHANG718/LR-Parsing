@@ -10,8 +10,8 @@
  * - 终结符和非终结符的自动识别
  *
  * @author ZJJ
- * @date 2025.6.9
- * @version 1.2
+ * @date 2025.6.18
+ * @version 2.3
  */
 
 #ifndef GRAMMAR_H

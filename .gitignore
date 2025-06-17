@@ -1,0 +1,76 @@
+# 编译生成的可执行文件
+*.exe
+*.out
+*.app
+lr_analyzer
+lr_cli
+
+# 编译生成的目标文件
+*.o
+*.obj
+*.so
+*.dll
+*.a
+*.lib
+
+# IDE和编辑器生成的文件
+.vscode/
+.vs/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Python编译文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.py[cod]
+*$py.class
+
+# 测试和调试文件
+*.log
+test_results.log
+debug.txt
+core
+core.*
+
+# 临时文件
+*.tmp
+*.temp
+*~
+
+# 压缩文件（除了发布包）
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows系统文件
+Desktop.ini
+$RECYCLE.BIN/
+
+# 构建目录
+build/
+dist/
+*.egg-info/
+
+# 文档生成文件
+docs/_build/
+
+# 配置文件（如果包含敏感信息）
+config.local.*
+.env
+.env.local

@@ -51,8 +51,8 @@ LR语法分析器图形化界面 - 中文版
 - JSON和文本双格式导出
 
 作者：ZJJ
-版本：v2.0
-日期：2025.6.10
+版本：v3.1
+日期：2025.6.21
 
 """
 
@@ -354,12 +354,12 @@ class CompleteLRGUI:
         
         布局：
         ┌──────────────────────────────────────────────┐
-        │ LR语法分析器               v2.0 - 支持 LR... │
+        │ LR语法分析器               vx.x - 支持 LR... │
         └──────────────────────────────────────────────┘
         """
-        # 创建标题容器框架
+        # 创建标题容器框架，减少内边距
         header_frame = ttk.Frame(self.root)
-        header_frame.pack(fill='x', padx=15, pady=10)
+        header_frame.pack(fill='x', padx=10, pady=5)
         
         # 左侧主标题：应用程序名称
         title_label = ttk.Label(header_frame,
@@ -370,7 +370,7 @@ class CompleteLRGUI:
         
         # 右侧版本信息：版本号和功能描述
         version_label = ttk.Label(header_frame, 
-                                 text="v2.0 - 支持 LR(0) / SLR(1) / LR(1)", 
+                                 text="v3.0 - 支持 LR(0) / SLR(1) / LR(1)", 
                                  font=('Arial', 9),
                                  foreground='#7f8c8d')
         version_label.pack(side='right')
@@ -390,9 +390,9 @@ class CompleteLRGUI:
         这种布局让用户可以在左侧进行操作，在右侧查看结果，
         符合从左到右的操作流程习惯。
         """
-        # 创建水平分割的主面板容器
+        # 创建水平分割的主面板容器，减少间距
         main_paned = ttk.PanedWindow(self.root, orient='horizontal')
-        main_paned.pack(fill='both', expand=True, padx=15, pady=5)
+        main_paned.pack(fill='both', expand=True, padx=5, pady=5)
         
         # 左侧控制面板框架
         left_frame = ttk.Frame(main_paned)
@@ -428,7 +428,7 @@ class CompleteLRGUI:
         """
         # 创建可滚动框架的组件结构
         # Canvas + Scrollbar + Frame 的组合实现可滚动区域
-        canvas = tk.Canvas(parent, bg='#f5f5f5')
+        canvas = tk.Canvas(parent, bg='#f5f5f5', highlightthickness=0)
         scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
@@ -439,8 +439,13 @@ class CompleteLRGUI:
         )
         
         # 将可滚动框架嵌入到Canvas中
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas_frame = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # 当Canvas大小改变时，调整内部框架的宽度
+        def configure_canvas(event):
+            canvas.itemconfig(canvas_frame, width=event.width)
+        canvas.bind('<Configure>', configure_canvas)
         
         # 布局Canvas和滚动条
         canvas.pack(side="left", fill="both", expand=True)
@@ -459,10 +464,27 @@ class CompleteLRGUI:
         # 操作按钮区域：主要功能和辅助功能按钮
         self.create_operation_section(scrollable_frame)
         
-        # 绑定鼠标滚轮事件到Canvas，实现滚轮滚动
+        # 绑定鼠标滚轮事件到整个控制面板区域，而不仅仅是Canvas
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # 绑定滚轮事件到Canvas和scrollable_frame
+        def bind_mousewheel(widget):
+            widget.bind("<MouseWheel>", _on_mousewheel)  # Windows
+            widget.bind("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))  # Linux
+            widget.bind("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))   # Linux
+            
+        bind_mousewheel(canvas)
+        bind_mousewheel(scrollable_frame)
+        
+        # 为所有子组件也绑定滚轮事件
+        def bind_all_children(widget):
+            bind_mousewheel(widget)
+            for child in widget.winfo_children():
+                bind_all_children(child)
+        
+        # 延迟绑定，确保所有组件都已创建
+        self.root.after(100, lambda: bind_all_children(scrollable_frame))
         
     def create_grammar_section(self, parent):
         """
@@ -644,11 +666,11 @@ class CompleteLRGUI:
         ttk.Button(toolbar, text="复制", 
                   command=lambda: self.copy_text(self.analysis_text)).pack(side='right', padx=5)
         
-        # Result text box
+        # Result text box with horizontal scrollbar
         self.analysis_text = scrolledtext.ScrolledText(
             self.analysis_frame, 
             font=(self.chinese_font, 10),
-            wrap='none',
+            wrap='none',  # 禁用自动换行，启用水平滚动
             bg='#fefefe',
             selectbackground='#3498db',
             selectforeground='white')
@@ -668,11 +690,11 @@ class CompleteLRGUI:
         ttk.Button(toolbar, text="复制", 
                   command=lambda: self.copy_text(self.action_text)).pack(side='right', padx=5)
         
-        # ACTION table display area
+        # ACTION table display area with horizontal scrollbar
         self.action_text = scrolledtext.ScrolledText(
             self.action_frame, 
             font=('Consolas', 10),
-            wrap='none',
+            wrap='none',  # 禁用自动换行，启用水平滚动
             bg='#fefefe',
             selectbackground='#3498db',
             selectforeground='white')
@@ -692,11 +714,11 @@ class CompleteLRGUI:
         ttk.Button(toolbar, text="复制", 
                   command=lambda: self.copy_text(self.goto_text)).pack(side='right', padx=5)
         
-        # GOTO table display area
+        # GOTO table display area with horizontal scrollbar
         self.goto_text = scrolledtext.ScrolledText(
             self.goto_frame, 
             font=('Consolas', 10),
-            wrap='none',
+            wrap='none',  # 禁用自动换行，启用水平滚动
             bg='#fefefe',
             selectbackground='#3498db',
             selectforeground='white')
@@ -716,11 +738,11 @@ class CompleteLRGUI:
         ttk.Button(toolbar, text="复制", 
                   command=lambda: self.copy_text(self.itemsets_text)).pack(side='right', padx=5)
         
-        # Item sets display area
+        # Item sets display area with horizontal scrollbar
         self.itemsets_text = scrolledtext.ScrolledText(
             self.itemsets_frame, 
             font=('Consolas', 10),
-            wrap='none',
+            wrap='none',  # 禁用自动换行，启用水平滚动
             bg='#fefefe',
             selectbackground='#3498db',
             selectforeground='white')
@@ -740,11 +762,11 @@ class CompleteLRGUI:
         ttk.Button(toolbar, text="复制", 
                   command=lambda: self.copy_text(self.process_text)).pack(side='right', padx=5)
         
-        # Analysis process display area
+        # Analysis process display area with horizontal scrollbar
         self.process_text = scrolledtext.ScrolledText(
             self.process_frame, 
             font=(self.chinese_font, 10),
-            wrap='none',
+            wrap='none',  # 禁用自动换行，启用水平滚动
             bg='#fefefe',
             selectbackground='#3498db',
             selectforeground='white')
@@ -756,7 +778,7 @@ class CompleteLRGUI:
         status_frame.pack(fill='x', side='bottom')
         
         self.status_bar = ttk.Label(status_frame, text="就绪", relief='sunken')
-        self.status_bar.pack(fill='x', padx=15, pady=5)
+        self.status_bar.pack(fill='x', padx=10, pady=3)
         
         # Progress bar (hidden state)
         self.progress_bar = ttk.Progressbar(status_frame, mode='indeterminate')
@@ -960,14 +982,15 @@ class CompleteLRGUI:
             
             # 第四步：构造命令行并调用C++程序
             cmd = [cpp_executable, temp_grammar_file, "-t", analyzer_type, "--table", "--json"]
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
             
             # 第五步：在主线程中更新界面显示结果
             self.root.after(0, lambda: self._update_table_results(result))
             
         except Exception as e:
             # 异常处理：在主线程中显示错误信息
-            self.root.after(0, lambda: self.show_error(f"构造分析表出错: {str(e)}"))
+            error_msg = f"构造分析表出错: {str(e)}"
+            self.root.after(0, lambda: self.show_error(error_msg))
         finally:
             # 清理工作：无论成功失败都要隐藏进度条
             self.root.after(0, self.hide_progress)
@@ -996,8 +1019,10 @@ class CompleteLRGUI:
         if result.returncode == 0:
             # 成功情况：解析并显示结果
             try:
-                # 解析C++后端返回的JSON数据
+                # 解析C++后端返回的JSON数据，先清理替换字符
                 output = result.stdout.strip()
+                # 清理UTF-8解码替换字符，避免显示乱码
+                output = output.replace('�', '')
                 self.current_data = json.loads(output)
                 
                 # 更新各个标签页的显示内容
@@ -1024,39 +1049,13 @@ class CompleteLRGUI:
             # 同时在分析结果标签页显示详细错误信息
             self.analysis_text.delete(1.0, tk.END)
             self.analysis_text.insert(tk.END, formatted_error)
-            
-            # 切换到分析结果标签页以显示错误
             self.notebook.select(self.analysis_frame)
-            
+    
     def display_action_table(self):
-        """
-        显示ACTION表
-        
-        该方法将JSON格式的ACTION表数据转换为易读的表格格式：
-        1. 从current_data中提取action_table数据
-        2. 分析所有终结符，作为表格的列标题
-        3. 创建表格标题行和分隔线
-        4. 按状态编号顺序创建每一行数据
-        5. 添加图例说明各种动作的含义
-        
-        表格格式：
-        状态\符号    a    +    (    )    $
-        ================================
-        0          s5        s1        
-        1          s5        s1        
-        2               s8             acc
-        ...
-        
-        图例说明：
-        - s<数字>: 移进到状态<数字>
-        - r<数字>: 用产生式<数字>归约
-        - acc: 接受
-        - 空白: 错误（语法错误）
-        """
+        """显示ACTION表"""
         if 'action_table' not in self.current_data:
             return
             
-        # 清空之前的内容
         self.action_text.delete(1.0, tk.END)
         
         action_table = self.current_data['action_table']
@@ -1244,13 +1243,14 @@ class CompleteLRGUI:
                 return
             
             cmd = [cpp_executable, temp_grammar_file, "-t", analyzer_type, "-s", input_string]
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
             
             # Update interface in main thread
             self.root.after(0, lambda: self._update_analysis_results(result, input_string))
             
         except Exception as e:
-            self.root.after(0, lambda: self.show_error(f"分析输入串出错: {str(e)}"))
+            error_msg = f"分析输入串出错: {str(e)}"
+            self.root.after(0, lambda: self.show_error(error_msg))
         finally:
             self.root.after(0, self.hide_progress)
             
@@ -1260,6 +1260,8 @@ class CompleteLRGUI:
         
         if result.returncode == 0:
             output = result.stdout
+            # 清理UTF-8解码替换字符，避免显示乱码
+            output = output.replace('�', '')
             self.process_text.delete(1.0, tk.END)
             self.process_text.insert(1.0, output)
             
@@ -1276,6 +1278,8 @@ class CompleteLRGUI:
             self.update_status("输入串分析完成")
         else:
             error_msg = result.stderr or result.stdout
+            # 清理UTF-8解码替换字符，避免显示乱码
+            error_msg = error_msg.replace('�', '')
             self.process_text.delete(1.0, tk.END)
             self.process_text.insert(1.0, f"输入串分析失败:\n{error_msg}")
             self.update_status("输入串分析失败")
@@ -1313,13 +1317,14 @@ class CompleteLRGUI:
             
             # Run command to get item sets
             cmd = [cpp_executable, temp_grammar_file, "-t", analyzer_type, "--items", "--json"]
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
             
             # Update interface in main thread
             self.root.after(0, lambda: self._update_item_sets_results(result))
             
         except Exception as e:
-            self.root.after(0, lambda: self.show_error(f"获取项目集出错: {str(e)}"))
+            error_msg = f"获取项目集出错: {str(e)}"
+            self.root.after(0, lambda: self.show_error(error_msg))
         finally:
             self.root.after(0, self.hide_progress)
     
@@ -1329,8 +1334,10 @@ class CompleteLRGUI:
         
         if result.returncode == 0:
             try:
-                # Parse JSON data
+                # Parse JSON data, clean replacement characters first
                 output = result.stdout.strip()
+                # 清理UTF-8解码替换字符，避免显示乱码
+                output = output.replace('�', '')
                 data = json.loads(output)
                 
                 # Update current_data with item sets

@@ -1,3 +1,12 @@
+# 条件语句文法
+# 特点：if-then-else控制结构与赋值语句结合
+# 复杂度：中等
+# 分析器兼容性：SLR(1), LR(1)
+# 典型输入示例：
+#   - 简单条件: if id then id = num else id = id
+#   - 嵌套表达式: if id + num then id = id else id = num
+#   - 复杂条件: if id then if id then id = num else id = id else id = num
+
 S -> if E then S else S
 S -> id = E
 E -> E + T

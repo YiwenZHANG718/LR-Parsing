@@ -12,8 +12,8 @@
  * - 语法分析过程的可视化
  *
  * @author ZJJ
- * @date 2025.6.10
- * @version 2.2
+ * @date 2025.6.19
+ * @version 2.3
  */
 
 #ifndef LR_ANALYZER_H
