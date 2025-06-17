@@ -84,8 +84,7 @@
 - 编写跨平台构建脚本（Makefile用于Linux/macOS，build.bat用于Windows）
 - 负责项目的编译环境配置和依赖管理
 - **测试框架开发**：设计和实现全面的语法测试用例集合
-- **自动化测试脚本**：编写跨平台的自动化测试脚本，支持UTF-8编码
-- **批处理脚本优化**：解决Windows批处理文件的中文编码问题，实现UTF-8支持
+- **自动化测试脚本**：编写Linux/macOS平台的Shell自动化测试脚本 (Windows暂不支持自动化测试)
 
 **核心技术要求:**
 - 熟练掌握C++编程和面向对象设计
@@ -95,12 +94,11 @@
 - 熟悉Make构建工具和批处理脚本编写
 - 了解不同编译器的使用和配置（GCC, MinGW, MSVC, Clang）
 - **测试工程能力**：能够设计全面的测试用例，覆盖各种边界情况
-- **脚本编程**：精通Shell脚本和Windows批处理编程
-- **编码处理**：解决跨平台字符编码问题，特别是UTF-8支持
+- **脚本编程**：精通Shell脚本编程
 
 **构建系统要求:**
 - **Makefile**: 支持Linux/macOS平台的GCC/Clang编译
-- **批处理脚本**: 支持Windows平台的MinGW/MSVC编译，完整UTF-8支持
+- **批处理脚本**: 支持Windows平台的MinGW/MSVC编译
 - **依赖检测**: 自动检测编译器和必要的库文件
 - **清理功能**: 提供clean目标清理编译产物
 - **调试支持**: 支持Debug和Release两种编译模式
@@ -112,7 +110,7 @@
 - **JSON输出**: 结构化数据，便于GUI解析
 - **错误处理**: 详细的错误信息和恢复机制
 - **测试框架**: 完整的测试用例覆盖，包括正确和错误文法
-- **自动化脚本**: 跨平台测试脚本，支持批量测试和结果统计
+- **自动化脚本**: 跨平台测试脚本，支持批量测试和结果统计 (目前仅支持Linux/macOS)
 
 **对应代码模块:**
 - `Algorithm/grammar.h` - 文法数据结构
@@ -122,11 +120,11 @@
 - `Algorithm/lr_cli.cpp` - 命令行接口
 - `Algorithm/main.cpp` - 交互式主程序
 - `Algorithm/Makefile` - Linux/macOS构建脚本
-- `Algorithm/build.bat` - Windows批处理构建脚本（UTF-8支持）
+- `Algorithm/build.bat` - Windows构建脚本
 - `Algorithm/LR_CLI_DOCUMENTATION.md` - CLI使用文档
 - `Algorithm/CODE_ARCHITECTURE.md` - 代码架构文档
 - `TestGrammar/` - 完整测试框架
-- `TestGrammar/test_all_grammars.sh` - 自动化测试脚本
+- `TestGrammar/test_all_grammars.sh` - Linux/macOS自动化测试脚本 (Windows暂不支持)
 
 ## 三、版本更新历史
 
@@ -354,37 +352,30 @@
 - **空文法**: empty_grammar.txt - 边界情况测试
 
 **自动化脚本开发:**
-- 🖥️ 开发了Windows UTF-8支持的批处理脚本
-- 🐧 创建了Linux/macOS Shell测试脚本  
-- 🔧 解决了Windows批处理文件中文编码问题
-- ⚡ 实现了快速测试和详细测试两种模式
+- 🔧 创建了Linux/macOS Shell测试脚本 (Windows暂不支持自动化测试)
+- 🔧 实现了完整的语法测试覆盖
+- ⚡ 支持快速测试和详细测试两种模式
 
-**批处理脚本特性:**
-- **UTF-8支持**: 完美显示中文字符和Unicode符号
+**测试脚本特性:**
+- **全面测试**: 覆盖所有正确和错误文法
 - **自动检测**: 自动检测可执行文件存在性
 - **多模式测试**: 支持单个文法测试和批量测试
 - **结果统计**: 显示测试成功/失败统计信息
 - **错误诊断**: 详细的错误信息和修复建议
 
-**技术突破:**
-- **编码解决方案**: 
-  - 使用`chcp 65001`设置UTF-8编码页
-  - 采用`::`注释替代`REM`避免中文解析问题
-  - 优化echo语句避免特殊字符冲突
-- **脚本架构**:
+**技术实现:**
+- **Shell脚本架构**:
   - 模块化的测试函数设计
   - 统一的错误处理机制
-  - 跨平台兼容的路径处理
+  - 兼容的路径处理
 - **测试覆盖**:
   - 正确文法: 100%通过率验证
   - 错误文法: 错误检测能力验证
   - 边界情况: 极限条件测试
 
 **脚本文件清单:**
-- `TestGrammar/test_utf8_simple.bat` - Windows UTF-8简化测试
-- `TestGrammar/test_simple.bat` - Windows标准测试脚本  
-- `TestGrammar/test_all_grammars.sh` - Linux/macOS全面测试
-- `Algorithm/build.bat` - Windows构建脚本（UTF-8支持）
+- `TestGrammar/test_all_grammars.sh` - Linux/macOS自动化测试脚本 (Windows暂不支持自动化测试)
+- `Algorithm/build.bat` - Windows构建脚本
 
 **测试验证结果:**
 - **LR0分析器**: ✅ 基础语法支持，预期冲突检测正常

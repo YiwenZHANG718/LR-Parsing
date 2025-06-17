@@ -49,8 +49,8 @@ LR/                                    # 项目根目录
 │   ├── *_grammar.txt                 # 各种测试文法文件（表达式、条件语句、if-else等）
 │   ├── FaultGrammar/                 # 错误文法测试集合
 │   │   └── *.txt                     # 错误类型测试
-│   ├── test_all_grammars.sh          # Linux/macOS自动化测试脚本
-│   ├── TestGrammar/test_results.log  # 测试日志文件（运行后生成）
+│   ├── test_all_grammars.sh          # Linux/macOS自动化测试脚本 (Windows暂不支持)
+│   ├── test_results.log              # 测试日志文件（运行后生成）
 │   └── README.md                     # 测试用例说明文档
 │
 ├── BACKEND_UNRESOLVED_ISSUES.md      # 后端开发未解决问题记录
@@ -93,9 +93,7 @@ LR/                                    # 项目根目录
   - circular_dependency.txt：循环依赖测试
   - reduce_reduce_conflict.txt：归约-归约冲突测试
 - **自动化测试脚本**：
-  - test_all_grammars.sh：Linux/macOS全面测试脚本
-  - test_simple.bat：Windows简化测试脚本
-  - test_utf8_simple.bat：Windows UTF-8测试脚本
+  - test_all_grammars.sh：Linux/macOS自动化测试脚本 (Windows暂不支持)
 - **README.md**：测试用例详细说明
 
 ## 快速开始
@@ -119,15 +117,18 @@ g++ -o lr_analyzer.exe main.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++
 ```
 
 #### 自动化测试
-```bash
-# Windows
-cd TestGrammar
-.\test_utf8_simple.bat
 
-# Linux/macOS  
+**Linux/macOS (支持自动化脚本)**:
+```bash
 cd TestGrammar
 chmod +x test_all_grammars.sh
 ./test_all_grammars.sh
+```
+
+**Windows (仅支持手动测试)**:
+```powershell
+cd TestGrammar  
+..\Algorithm\lr_cli.exe example_grammar.txt -t slr1 --table
 ```
 
 #### Linux/macOS
@@ -143,27 +144,26 @@ g++ -o lr_analyzer main.cpp lr_analyzer.cpp grammar.cpp lr_item.cpp -std=c++17 -
 
 本项目完全支持if-else语句的语法分析。可以通过以下方式快速验证：
 
-#### 使用自动化测试脚本
+#### 使用自动化测试脚本 (仅Linux/macOS)
 ```bash
-# Windows - UTF-8支持的测试脚本
 cd TestGrammar
-.\test_utf8_simple.bat
+./test_all_grammars.sh
 
 # 将看到如下输出：
-# [1/3] 测试条件语句语法...
+# ===== 测试: conditional_grammar.txt =====
 # SUCCESS: 条件语句语法构造成功
-# [2/3] 测试if-else语言语法...  
+# ===== 测试: if_else_language_grammar.txt =====  
 # SUCCESS: if-else语言语法构造成功
 ```
 
-#### 手动测试if-else语句
+#### 手动测试if-else语句 (跨平台)
 ```bash
 # 测试简单条件语句
 cd Algorithm
-.\lr_cli.exe ..\TestGrammar\conditional_grammar.txt -t slr1 -s "if id then id = num else id = num"
+./lr_cli ../TestGrammar/conditional_grammar.txt -t slr1 -s "if id then id = num else id = num"
 
-# 测试复杂if-else语言
-.\lr_cli.exe ..\TestGrammar\if_else_language_grammar.txt -t slr1 -s "if ( id > number ) { id = number ; }"
+# 测试复杂if-else语言 (Windows用户使用lr_cli.exe)
+./lr_cli ../TestGrammar/if_else_language_grammar.txt -t slr1 -s "if ( id > number ) { id = number ; }"
 ```
 
 ### 使用交互式版本
@@ -214,7 +214,7 @@ python3 GUI.py
 ### 输出和接口功能  
 - ✅ **多种输出格式** - 人类友好的文本格式 + 机器可读的JSON格式
 - ✅ **完整中文图形界面** - 基于Tkinter的GUI，支持表格显示和交互
-- ✅ **命令行批处理支持** - 适合脚本调用和自动化测试
+- ✅ **命令行批处理支持** - 适合脚本调用和Linux/macOS自动化测试
 - ✅ **实时错误报告** - 详细的错误位置和建议修复方案
 - ✅ **结果导出功能** - 支持完整分析报告的文本和JSON导出
 
@@ -615,7 +615,7 @@ def safe_read_file(file_path):
 - ✅ **if-else语句支持**: 完全支持条件语句和复杂if-else语言结构  
 - ✅ **跨平台构建**: Windows、Linux、macOS全平台支持
 - ✅ **UTF-8编码**: 完美的中文字符支持
-- ✅ **自动化测试**: 完整的测试框架和批处理脚本
+- ✅ **自动化测试**: 完整的测试框架和Shell脚本 (Linux/macOS)
 - ✅ **图形化界面**: Python Tkinter用户友好界面
 - ✅ **命令行工具**: 强大的CLI接口，支持脚本调用
 
@@ -639,13 +639,13 @@ def safe_read_file(file_path):
    - 文法数据结构和解析逻辑
    - 命令行接口和JSON数据交换
    - 跨平台构建脚本和自动化测试框架
-   - **测试用例设计和批处理脚本开发**
+   - **测试用例设计和Shell脚本开发** (Linux/macOS)
 
 ### 技术栈
 
 - **后端**: C++17, STL, JSON
 - **前端**: Python 3.6+, Tkinter
-- **构建**: Make, 批处理脚本
+- **构建**: Make, 批处理脚本 (Windows), Shell脚本 (Linux/macOS)
 - **测试**: 自动化测试框架
 - **文档**: Markdown, 中英文双语
 
