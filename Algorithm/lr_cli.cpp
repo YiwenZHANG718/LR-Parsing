@@ -18,8 +18,8 @@
  * - JSON输出: ./lr_cli grammar.txt --table --json
  *
  * @author 语法分析课程设计
- * @date 2025.6.18
- * @version 2.3
+ * @date 2025.6.11
+ * @version 2.0
  */
 
 #include <iostream>
@@ -29,13 +29,6 @@
 #include <fstream>
 #include "grammar.h"
 #include "lr_analyzer.h"
-
-#ifdef _WIN32
-#include <windows.h>
-#include <io.h>
-#include <fcntl.h>
-#include <locale.h>
-#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -183,24 +176,10 @@ void outputItemSets(LRAnalyzer* analyzer, bool json = false) {
  */
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
-    // 增强的Windows控制台UTF-8编码设置
+    // 设置Windows控制台编码页为UTF-8
+    system("chcp 65001 >nul");
     SetConsoleOutputCP(65001);
     SetConsoleCP(65001);
-    
-    // 启用虚拟终端处理
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD dwMode = 0;
-    GetConsoleMode(hOut, &dwMode);
-    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(hOut, dwMode);
-    
-    // 设置locale
-    setlocale(LC_ALL, "zh_CN.UTF-8");
-    
-    // 设置输入输出模式
-    _setmode(_fileno(stdout), _O_U8TEXT);
-    _setmode(_fileno(stdin), _O_U8TEXT);
-    _setmode(_fileno(stderr), _O_U8TEXT);
 #endif
 
     // 检查最少参数要求
@@ -251,7 +230,7 @@ int main(int argc, char* argv[]) {
     // 加载并解析文法文件
     Grammar grammar;
     if (!grammar.loadFromFile(grammarFile)) {
-        std::cerr << "错误: 无法加载文法文件 " << grammarFile << std::endl;
+        // grammar.loadFromFile 已经报告了具体错误信息
         return 1;
     }
     
@@ -280,7 +259,7 @@ int main(int argc, char* argv[]) {
     // 检查分析表构造是否成功
     if (!success) {
         std::cerr << "错误: 分析表构造失败" << std::endl;
-        analyzer.printConflicts();                    // 输出冲突信息
+        analyzer.printConflicts(std::cerr);           // 将冲突信息也输出到stderr
         return 1;
     }
 

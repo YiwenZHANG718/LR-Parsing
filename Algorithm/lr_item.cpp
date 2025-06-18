@@ -1,29 +1,27 @@
 /**
- * @file lr_item.cpp
- * @brief LR项目和项目集合的实现文件
+ * @file lr_item.h
+ * @brief LR项目和项目集的定义与操作
  *
- * 本文件实现了LR语法分析中的核心数据结构：
- * - LRItem: 表示一个LR项目，包含产生式、点位置和前瞻符号
- * - LRItemSet: 表示一个项目集合，用于构造LR自动机的状态
+ * 本文件定义了LR语法分析中的核心数据结构：
+ * - LRItem类：表示单个LR项目
+ * - ItemSet类：表示项目集合
+ * - 相关的操作函数：闭包计算、GOTO函数等
  *
- * LR项目是LR语法分析的基础，每个项目表示一个产生式在某个分析位置的状态。
- * 项目集合构成了LR自动机的状态，通过状态间的转移实现语法分析。
+ * LR项目是LR分析的基础概念，形式为A -> α·β，其中：
+ * - A是产生式左部（非终结符）
+ * - α·β是产生式右部，点(·)标记当前分析进度
+ * - 点左边是已识别部分，点右边是期待识别部分
+ *
+ * 项目集是LR项目的集合，对应于LR自动机的一个状态。
+ * 通过计算项目集的闭包和GOTO函数，可以构造LR分析表。
+ *
+ * @author ZJJ
+ * @date 2025.6.10
+ * @version 2.0
  */
 
 #include "lr_item.h"
 #include <iostream>
-
-#ifdef _WIN32
-#include <windows.h>
-// 设置控制台编码为UTF-8
-static bool initConsoleUTF8() {
-    SetConsoleOutputCP(65001);
-    SetConsoleCP(65001);
-    system("chcp 65001 >nul");
-    return true;
-}
-static bool utf8_initialized = initConsoleUTF8();
-#endif
 
 /**
  * @brief 比较两个LR项目是否相等

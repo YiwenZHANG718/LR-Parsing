@@ -51,8 +51,8 @@ LR语法分析器图形化界面 - 中文版
 - JSON和文本双格式导出
 
 作者：ZJJ
-版本：v3.1
-日期：2025.6.21
+版本：v2.0
+日期：2025.6.10
 
 """
 
@@ -188,6 +188,7 @@ class CompleteLRGUI:
         
         # 检测和设置支持中文的字体
         self.chinese_font = self.get_chinese_font()
+        print(f"GUI当前使用字体: {self.chinese_font}")
         
         # 配置自定义样式，使用检测到的中文字体
         # 主标题样式：大字体、粗体、深蓝色
@@ -1041,15 +1042,17 @@ class CompleteLRGUI:
                 # JSON解析失败的错误处理
                 self.show_error(f"解析JSON数据失败: {str(e)}")
         else:
-            # 失败情况：显示错误信息
-            error_msg = result.stderr or result.stdout
+            # 失败情况：错误信息现在统一在stderr中
+            error_msg = result.stderr.strip() if result.stderr else "未知错误"
             formatted_error = self.format_error_message(error_msg)
-            self.show_error(f"分析表构造失败:\n{formatted_error}")
             
-            # 同时在分析结果标签页显示详细错误信息
+            # 在分析结果标签页显示详细错误信息
             self.analysis_text.delete(1.0, tk.END)
             self.analysis_text.insert(tk.END, formatted_error)
             self.notebook.select(self.analysis_frame)
+            
+            # 显示简化的错误对话框
+            self.show_error("分析表构造失败，详细信息请查看分析结果标签页")
     
     def display_action_table(self):
         """显示ACTION表"""
@@ -1277,11 +1280,25 @@ class CompleteLRGUI:
             self.notebook.select(self.process_frame)
             self.update_status("输入串分析完成")
         else:
-            error_msg = result.stderr or result.stdout
+            # 失败情况：错误信息现在统一在stderr中
+            error_msg = result.stderr.strip() if result.stderr else "未知错误"
             # 清理UTF-8解码替换字符，避免显示乱码
             error_msg = error_msg.replace('�', '')
+            formatted_error = self.format_error_message(error_msg)
+            
+            # 在分析结果和分析过程标签页都显示错误信息
             self.process_text.delete(1.0, tk.END)
-            self.process_text.insert(1.0, f"输入串分析失败:\n{error_msg}")
+            self.process_text.insert(1.0, formatted_error)
+            
+            self.analysis_text.delete(1.0, tk.END)
+            summary = f"=== 输入串分析结果 ===\n\n"
+            summary += f"输入串: {input_string}\n"
+            summary += f"分析器: {self.analyzer_type.get()}\n"
+            summary += f"结果: 分析失败\n\n"
+            summary += formatted_error
+            self.analysis_text.insert(1.0, summary)
+            
+            self.notebook.select(self.process_frame)
             self.update_status("输入串分析失败")
             
     def show_item_sets(self):
@@ -1354,13 +1371,20 @@ class CompleteLRGUI:
             except json.JSONDecodeError as e:
                 self.show_error(f"解析项目集JSON数据失败: {str(e)}")
         else:
-            error_msg = result.stderr or result.stdout
-            self.show_error(f"获取项目集失败:\n{error_msg}")
-            # Also display error in analysis result tab
+            # 失败情况：错误信息现在统一在stderr中
+            error_msg = result.stderr.strip() if result.stderr else "未知错误"
+            formatted_error = self.format_error_message(error_msg)
+            
+            # 显示详细错误信息
+            self.show_error("项目集获取失败，详细信息请查看分析结果标签页")
+            
+            # 在分析结果标签页显示详细错误信息
             self.analysis_text.delete(1.0, tk.END)
             error_summary = f"=== 项目集获取失败 ===\n\n"
-            error_summary += f"分析器类型: {self.analyzer_type.get()}\n"
-            error_summary += f"错误信息:\n{error_msg}\n\n"
+            error_summary += f"分析器类型: {self.analyzer_type.get()}\n\n"
+            error_summary += formatted_error
+            self.analysis_text.insert(1.0, error_summary)
+            self.notebook.select(self.analysis_frame)
             error_summary += "请检查文法是否正确，并确保符合所选分析器类型的要求。"
             self.analysis_text.insert(tk.END, error_summary)
         
@@ -1529,20 +1553,23 @@ class CompleteLRGUI:
             return False
         return True
     
+
     def format_error_message(self, error_msg):
         """
         格式化错误信息，提供用户友好的错误显示
         
         该方法将C++后端返回的原始错误信息转换为结构化、易理解的格式：
-        1. 检测和解析不同类型的冲突（移进-归约、归约-归约）
-        2. 提取状态和符号信息
+        1. 检测和解析不同类型的错误（空文法、格式错误、符号问题、冲突等）
+        2. 提取关键信息（行号、符号名称、状态等）
         3. 添加错误原因分析和解决建议
         4. 包含分析器类型和时间戳等上下文信息
         
         支持的错误类型：
-        - 移进/归约冲突：在某个状态对某个符号既可以移进又可以归约
-        - 归约/归约冲突：在某个状态对某个符号可以用多个产生式归约
-        - 其他语法分析错误
+        - 空文法错误
+        - 产生式格式错误
+        - 符号推导错误
+        - 无用符号错误
+        - LR分析冲突
         
         Args:
             error_msg (str): C++后端返回的原始错误信息
@@ -1550,60 +1577,136 @@ class CompleteLRGUI:
         Returns:
             str: 格式化后的用户友好错误信息
         """
-        formatted = f"错误: 分析表构造失败\n\n"
+        if not error_msg:
+            return "未知错误：没有错误信息"
         
-        # 检查是否包含冲突信息
-        if "冲突" in error_msg or "conflict" in error_msg.lower():
-            conflicts = []
+        # 清理错误信息中的替换字符
+        cleaned_error = error_msg.replace('�', '').strip()
+        
+        # 检查具体的错误类型
+        if "Grammar file is empty" in cleaned_error or "文法文件为空" in cleaned_error:
+            formatted = "✗ 文法文件为空\n\n"
+            formatted += "错误描述: 文法文件中没有找到任何产生式\n\n"
+            formatted += "解决方案:\n"
+            formatted += "1. 检查文法文件是否包含有效的产生式\n"
+            formatted += "2. 确保产生式格式正确：A -> alpha\n"
+            formatted += "3. 检查文件编码是否正确\n"
             
-            # 使用正则表达式解析移进-归约冲突
-            # 匹配模式：包含"移进"、"归约"、"冲突"、"状态"、"符号"的文本
-            sr_pattern = r"移进[/－-]归约冲突.*?状态\s*(\d+).*?符号\s*([^\s\n]+)"
-            sr_matches = re.findall(sr_pattern, error_msg)
-            for state, symbol in sr_matches:
-                conflicts.append(f"  移进/归约冲突在状态 {state} 符号 {symbol}")
+        elif "Invalid production format" in cleaned_error or "产生式格式错误" in cleaned_error:
+            # 提取行号信息
+            line_match = re.search(r'line (\d+)', cleaned_error)
+            line_info = f"第{line_match.group(1)}行" if line_match else "某行"
             
-            # 使用正则表达式解析归约-归约冲突
-            rr_pattern = r"归约[/－-]归约冲突.*?状态\s*(\d+).*?符号\s*([^\s\n]+)"
-            rr_matches = re.findall(rr_pattern, error_msg)
-            for state, symbol in rr_matches:
-                conflicts.append(f"  归约/归约冲突在状态 {state} 符号 {symbol}")
+            formatted = f"✗ 产生式格式错误（{line_info}）\n\n"
+            formatted += "错误描述: 产生式不符合标准格式\n\n"
+            formatted += "正确格式:\n"
+            formatted += "  A -> alpha        # 基本产生式\n"
+            formatted += "  A -> alpha | beta # 多选择产生式\n"
+            formatted += "  A -> ε           # 空产生式\n\n"
+            formatted += "常见错误:\n"
+            formatted += "1. 缺少 '->' 分隔符\n"
+            formatted += "2. 左部为空或包含非法字符\n"
+            formatted += "3. 使用了错误的箭头符号（如 '=>', ':'等）\n"
             
-            # 如果没有找到具体冲突模式，尝试其他方式提取信息
-            if not conflicts:
-                # 查找包含"状态"和数字的行
-                state_lines = re.findall(r".*状态\s*(\d+).*", error_msg)
-                for line in state_lines:
-                    if "冲突" in line:
-                        conflicts.append(f"  {line.strip()}")
+        elif "cannot derive any terminal string" in cleaned_error or "无法推导出任何终结符串" in cleaned_error:
+            # 提取符号名称
+            symbol_match = re.search(r"'([^']+)' cannot derive", cleaned_error)
+            symbol = symbol_match.group(1) if symbol_match else "某符号"
             
-            # 显示找到的冲突信息
+            formatted = f"✗ 符号推导错误：'{symbol}'\n\n"
+            formatted += f"错误描述: 非终结符 '{symbol}' 无法推导出任何终结符串\n\n"
+            formatted += "可能原因:\n"
+            formatted += "1. 存在无限递归（如 A -> A）\n"
+            formatted += "2. 缺少到终结符的路径\n"
+            formatted += "3. 产生式定义不完整\n\n"
+            formatted += "解决方案:\n"
+            formatted += "1. 检查相关产生式是否形成无限循环\n"
+            formatted += "2. 确保每个非终结符都有到终结符的推导路径\n"
+            formatted += "3. 添加缺失的产生式或修改现有规则\n"
+            
+        elif "is unreachable from start symbol" in cleaned_error or "无法从起始符号到达" in cleaned_error:
+            # 提取符号名称
+            symbol_match = re.search(r"'([^']+)' is unreachable", cleaned_error)
+            symbol = symbol_match.group(1) if symbol_match else "某符号"
+            
+            formatted = f"✗ 无用符号：'{symbol}'\n\n"
+            formatted += f"错误描述: 非终结符 '{symbol}' 无法从起始符号到达\n\n"
+            formatted += "可能原因:\n"
+            formatted += "1. 该符号的产生式是多余的\n"
+            formatted += "2. 缺少从起始符号到该符号的推导路径\n"
+            formatted += "3. 文法结构设计问题\n\n"
+            formatted += "解决方案:\n"
+            formatted += "1. 删除无用的产生式\n"
+            formatted += "2. 添加从起始符号到该符号的推导路径\n"
+            formatted += "3. 重新设计文法结构\n"
+            
+        elif "冲突" in cleaned_error or "conflict" in cleaned_error.lower() or "检测到冲突" in cleaned_error:
+            conflicts = set()  # 使用set避免重复
+            
+            # 解析移进-归约冲突 - 支持多种格式
+            sr_patterns = [
+                r"移进/归约冲突在状态\s*(\d+)\s*符号\s*([^\s\n]+)",
+                r"移进[/－-]归约冲突.*?状态\s*(\d+).*?符号\s*([^\s\n]+)",
+                r"shift[/－-]reduce conflict.*?state\s*(\d+).*?symbol\s*([^\s\n]+)"
+            ]
+            
+            for pattern in sr_patterns:
+                matches = re.findall(pattern, cleaned_error, re.IGNORECASE)
+                for state, symbol in matches:
+                    # 清理符号名称，去掉可能的引号
+                    clean_symbol = symbol.strip("'\"")
+                    conflicts.add(f"  移进/归约冲突在状态 {state} 符号 '{clean_symbol}'")
+            
+            # 解析归约-归约冲突 - 支持多种格式
+            rr_patterns = [
+                r"归约/归约冲突在状态\s*(\d+)\s*符号\s*([^\s\n]+)",
+                r"归约[/－-]归约冲突.*?状态\s*(\d+).*?符号\s*([^\s\n]+)",
+                r"reduce[/－-]reduce conflict.*?state\s*(\d+).*?symbol\s*([^\s\n]+)"
+            ]
+            
+            for pattern in rr_patterns:
+                matches = re.findall(pattern, cleaned_error, re.IGNORECASE)
+                for state, symbol in matches:
+                    # 清理符号名称，去掉可能的引号
+                    clean_symbol = symbol.strip("'\"")
+                    conflicts.add(f"  归约/归约冲突在状态 {state} 符号 '{clean_symbol}'")
+            
             if conflicts:
-                formatted += "✗ 检测到冲突：\n"
-                formatted += "\n".join(conflicts)
+                formatted = "✗ 检测到LR分析冲突\n\n"
+                formatted += "冲突详情:\n"
+                # 将set转为排序的list，确保输出稳定
+                formatted += "\n".join(sorted(list(conflicts)))
                 formatted += "\n\n"
+                formatted += "解决方案:\n"
+                formatted += "1. 尝试使用更强的分析器类型（LR(0) < SLR(1) < LR(1)）\n"
+                formatted += "2. 重写文法规则以消除歧义\n"
+                formatted += "3. 调整操作符优先级和结合性\n"
             else:
-                formatted += f"✗ 分析表构造失败\n\n"
+                # 如果没有找到具体冲突，但确实是冲突错误，直接显示原始信息
+                formatted = "✗ 分析表构造失败（冲突）\n\n"
+                if "检测到冲突" in cleaned_error:
+                    formatted += f"冲突详情:\n{cleaned_error}\n\n"
+                else:
+                    formatted += "错误描述: 检测到未知类型的冲突\n\n"
+                formatted += "解决方案:\n"
+                formatted += "1. 尝试使用更强的分析器类型（LR(0) < SLR(1) < LR(1)）\n"
+                formatted += "2. 重写文法规则以消除歧义\n"
+                formatted += "3. 调整操作符优先级和结合性\n"
         else:
-            formatted += f"✗ 分析表构造失败\n\n"
+            # 通用错误处理
+            formatted = "✗ 分析表构造失败\n\n"
+            formatted += "错误描述: 未能成功构造分析表\n\n"
+            formatted += "可能原因:\n"
+            formatted += "1. 文法不符合所选分析器类型的要求\n"
+            formatted += "2. 文法存在语法错误或格式问题\n"
+            formatted += "3. 文法存在冲突或其他结构问题\n"
         
-        # 添加原始错误信息以供技术用户参考
-        formatted += f"原始错误信息:\n{error_msg}\n\n"
+        # 添加原始错误信息
+        formatted += f"\n原始错误信息:\n{cleaned_error}\n\n"
         
         # 添加上下文信息
         formatted += f"分析器类型: {self.analyzer_type.get()}\n"
-        formatted += f"构造时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        
-        # 提供问题分析和解决建议
-        formatted += "可能的原因:\n"
-        formatted += "1. 文法不符合所选分析器类型的要求\n"
-        formatted += "2. 文法存在语法错误或格式问题\n"
-        formatted += "3. 文法存在冲突（如移进-归约冲突、归约-归约冲突）\n\n"
-        formatted += "建议:\n"
-        formatted += "- 检查文法规则的格式是否正确\n"
-        formatted += "- 尝试使用更强的分析器类型（LR(0) < SLR(1) < LR(1)）\n"
-        formatted += "- 检查文法是否存在左递归或其他问题\n"
-        formatted += "- 如果是冲突问题，考虑重写文法规则"
+        formatted += f"分析时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
         
         return formatted
         

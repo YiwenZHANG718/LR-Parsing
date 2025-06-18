@@ -19,8 +19,8 @@
  * - 调试和测试
  *
  * @author ZJJ
- * @date 2025.6.11
- * @version 1.2
+ * @date 2025
+ * @version 1.0
  */
 
 #include <iostream>
@@ -34,7 +34,6 @@
 #include <windows.h>
 #include <io.h>
 #include <fcntl.h>
-#include <locale.h>
 #endif
 
 /**
@@ -94,15 +93,10 @@ std::vector<std::string> tokenizeInput(const std::string& input) {
  */
 int main() {
 #ifdef _WIN32
-    // 设置Windows控制台为UTF-8模式
+    // 设置Windows控制台编码页为UTF-8
+    system("chcp 65001 >nul");
     SetConsoleOutputCP(65001);
     SetConsoleCP(65001);
-    
-    // 设置C locale
-    setlocale(LC_ALL, ".UTF8");
-    
-    // 强制切换到UTF-8编码页并设置环境
-    system("chcp 65001 >nul 2>&1");
 #endif
 
     // 初始化程序状态
@@ -112,7 +106,7 @@ int main() {
     bool tableConstructed = false;      // 分析表构造状态
 
     // 显示程序信息
-    std::cout << "LR语法分析器 - 支持LR(0), SLR(1), LR(1)分析" << std::endl;    std::cout << "作者：语法分析课程设计" << std::endl;
+    std::cout << "LR语法分析器 - 支持LR(0), SLR(1), LR(1)分析" << std::endl;    std::cout << "作者：ZJJ" << std::endl;
 
     int choice;
     // 主程序循环：处理用户交互
@@ -125,9 +119,7 @@ int main() {
         case 1: { // 从文件读取文法
             std::cout << "请输入文法文件名: ";
             std::string filename;
-            std::getline(std::cin, filename);
-
-            if (grammar.loadFromFile(filename)) {
+            std::getline(std::cin, filename);            if (grammar.loadFromFile(filename)) {
                 grammar.augment();              // 文法增广
                 grammarLoaded = true;           // 更新状态
                 tableConstructed = false;       // 重置分析表状态
@@ -135,8 +127,7 @@ int main() {
                 analyzer = new LRAnalyzer(grammar);  // 创建新的分析器
                 std::cout << "✓ 文法加载成功" << std::endl;
             }
-            else {
-                std::cout << "✗ 文法加载失败" << std::endl;            }
+            // loadFromFile 失败时已输出具体错误信息，无需重复显示
             break;
         }
 
@@ -186,7 +177,8 @@ int main() {
                 std::cout << "✗ SLR(1)分析表构造失败，存在冲突" << std::endl;
             }
             break;
-        }        case 5: { // 构造LR(1)分析表
+        }
+        case 5: { // 构造LR(1)分析表
             if (!grammarLoaded) {
                 std::cout << "✗ 请先加载文法" << std::endl;
                 break;
@@ -203,7 +195,8 @@ int main() {
                 std::cout << "✗ LR(1)分析表构造失败，存在冲突" << std::endl;
             }
             break;
-        }        case 6: { // 显示项目集
+        }        
+        case 6: { // 显示项目集
             if (!grammarLoaded) {
                 std::cout << "✗ 请先加载文法" << std::endl;
                 break;
@@ -217,7 +210,8 @@ int main() {
 
             analyzer->printItemSets();  // 打印所有项目集
             break;
-        }        case 7: { // 显示分析表
+        }        
+        case 7: { // 显示分析表
             if (!tableConstructed) {
                 std::cout << "✗ 请先成功构造分析表" << std::endl;
                 break;
@@ -227,7 +221,8 @@ int main() {
             analyzer->printActionTable();  // 显示动作表
             analyzer->printGotoTable();    // 显示转移表
             break;
-        }        case 8: { // 语法分析
+        }
+        case 8: { // 语法分析
             if (!tableConstructed) {
                 std::cout << "✗ 请先成功构造分析表" << std::endl;
                 break;
@@ -250,7 +245,8 @@ int main() {
                 std::cout << "✗ 分析失败，输入串不符合文法" << std::endl;
             }
             break;
-        }        case 9: { // 显示文法
+        }       
+        case 9: { // 显示文法
             if (!grammarLoaded) {
                 std::cout << "✗ 请先加载文法" << std::endl;
                 break;

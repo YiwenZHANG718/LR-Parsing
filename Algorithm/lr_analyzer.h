@@ -5,15 +5,15 @@
  * 本文件定义了完整的LR语法分析器类，支持：
  * - LR(0)语法分析
  * - SLR(1)语法分析
- * - LR(1)语法分析（简化版本）
+ * - LR(1)语法分析
  * - 项目集族的构造和管理
  * - ACTION表和GOTO表的构造
  * - 冲突检测和报告
  * - 语法分析过程的可视化
  *
  * @author ZJJ
- * @date 2025.6.19
- * @version 2.3
+ * @date 2025.6.16
+ * @version 2.2
  */
 
 #ifndef LR_ANALYZER_H
@@ -283,6 +283,8 @@ public:
      * - 最强大的LR方法
      * - 使用前瞻符号，冲突最少
      * - 项目集族可能很大
+     *
+     * 注意：当前实现是简化版本
      */
     bool constructLR1Table();
 
@@ -336,6 +338,7 @@ public:
      * - 冲突详情
      */
     void printConflicts() const;
+    void printConflicts(std::ostream& os) const;
 
     // 语法分析
     /**

@@ -120,23 +120,46 @@ bool Grammar::loadFromFile(const std::string& filename) {
 }
 
 /**
- * @brief 从标准输入读取文法
+ * @brief 从标准输入读取并验证文法
  *
- * 提供交互式输入界面，显示格式说明和示例。
+ * 交互式输入过程：
+ * 1. 显示格式说明和示例
+ * 2. 逐行读取用户输入
+ * 3. 对每行进行格式验证
+ * 4. 解析有效的产生式
+ * 5. 执行完整的文法验证
+ * 
  * 用户输入空行时结束输入。
+ * 如果发现格式错误或文法无效，会输出错误信息。
  */
 void Grammar::loadFromInput() {
-    std::cout << "Enter grammar (one production per line, empty line to end):" << std::endl;
-    std::cout << "Format: A -> alpha | beta" << std::endl;
-    std::cout << "Example: E -> E + T | T" << std::endl;
+    std::cout << "请输入文法（每行一个产生式，空行结束）：" << std::endl;
+    std::cout << "格式：A -> alpha | beta" << std::endl;
+    std::cout << "示例：E -> E + T | T" << std::endl;
 
     std::string line;
+    int lineNumber = 0;
+    bool hasError = false;
+    
     while (std::getline(std::cin, line)) {
         if (line.empty()) break;
+        
+        lineNumber++;
+        
+        // 验证产生式格式
+        if (!isValidProductionFormat(line)) {
+            reportError("Error: Invalid production format at line " + std::to_string(lineNumber) + ": " + line);
+            hasError = true;
+            continue; // 继续读取但标记为错误
+        }
+        
         parseProduction(line);
     }
-
-    extractSymbols();
+    
+    // 仅在没有格式错误时验证文法
+    if (!hasError) {
+        validateGrammar();
+    }
 }
 
 /**
@@ -163,7 +186,7 @@ void Grammar::parseProduction(const std::string& line) {
     std::string left = line.substr(0, arrowPos);
     std::string right = line.substr(arrowPos + 2);
 
-    // 去除左部空白字符
+    // 去除左部空白字符（找出所有空格、tab、换行等字符，把它们“移动”到序列末尾，然后一次性删掉这些空白）
     left.erase(std::remove_if(left.begin(), left.end(), ::isspace), left.end());
 
     // 处理右部的多个选择分支（用|分隔）
@@ -362,30 +385,30 @@ bool Grammar::isValidProductionFormat(const std::string& line) {
  * @return 所有非终结符都能推导出终结符串返回true，存在无法推导的非终结符返回false
  */
 bool Grammar::hasReachableSymbols() {
-    // 检查所有非终结符是否都能推导出终结符串
+    // 1. 初始化：把 所有终结符 都标记为 已知可以推导出终结符串
     std::set<std::string> canDeriveTerminals;
-    std::set<std::string> visited;
-    
-    // 首先，标记所有终结符为可推导
-    for (const auto& terminal : terminals) {
+    //std::set<std::string> visited;
+        for (const auto& terminal : terminals) {
         canDeriveTerminals.insert(terminal);
     }
     
-    // 迭代查找能推导出终结符的非终结符
+    // 2. 固定点迭代：只要新增了可推导的非终结符就继续
     bool changed = true;
     while (changed) {
         changed = false;
         for (const auto& prod : productions) {
+            // 如果左部已经在可推导集合中，跳过
             if (canDeriveTerminals.find(prod.left) != canDeriveTerminals.end()) {
-                continue; // 已标记为可推导
+                continue; 
             }
             
-            // 检查此产生式是否能推导出终结符
+            // 检查右部的每个符号是否都“已知可推导”
             bool canDerive = true;
             for (const auto& symbol : prod.right) {
                 if (symbol == "ε") {
-                    continue; // ε总是可推导的
+                    continue; // ε跳过
                 }
+                // 如果符号是非终结符，检查它是否在可推导集合中
                 if (canDeriveTerminals.find(symbol) == canDeriveTerminals.end()) {
                     canDerive = false;
                     break;
@@ -399,7 +422,7 @@ bool Grammar::hasReachableSymbols() {
         }
     }
 
-    // 检查任何非终结符是否无法推导出终结符
+    // 3. 最终检查：跳过增广符号（末尾带'），其余非终结符都必须在 canDeriveTerminals 中
     for (const auto& nt : nonterminals) {
         if (nt.back() == '\'') continue; // 跳过推广符号
         if (canDeriveTerminals.find(nt) == canDeriveTerminals.end()) {
@@ -462,7 +485,7 @@ bool Grammar::checkReachableProductions() {
             }
         }
     }
-        
+
     // 检查不可达的非终结符
     for (const auto& nt : nonterminals) {
         if (nt.back() == '\'') continue; 
