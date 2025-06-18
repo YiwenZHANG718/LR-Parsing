@@ -1,9 +1,18 @@
 /**
  * @file grammar.cpp
- * @brief ÉÏÏÂÎÄÎŞ¹ØÎÄ·¨ÀàµÄÊµÏÖÎÄ¼ş
+ * @brief ä¸Šä¸‹æ–‡æ— å…³æ–‡æ³•çš„å®šä¹‰å’Œå¤„ç†
  *
- * ±¾ÎÄ¼şÊµÏÖÁËÎÄ·¨µÄ¶ÁÈ¡¡¢½âÎö¡¢Ôö¹ãºÍÏÔÊ¾¹¦ÄÜ¡£
- * Ö§³Ö´ÓÎÄ¼şºÍ±ê×¼ÊäÈë¶ÁÈ¡ÎÄ·¨£¬×Ô¶¯Ê¶±ğÖÕ½á·ûºÍ·ÇÖÕ½á·û¡£
+ * æœ¬æ–‡ä»¶å®šä¹‰äº†ä¸Šä¸‹æ–‡æ— å…³æ–‡æ³•çš„è¡¨ç¤ºå’ŒåŸºæœ¬æ“ä½œï¼ŒåŒ…æ‹¬ï¼š
+ * - äº§ç”Ÿå¼çš„è¡¨ç¤ºå’Œæ“ä½œ
+ * - æ–‡æ³•çš„å­˜å‚¨å’Œç®¡ç†
+ * - æ–‡æ³•çš„è¯»å–ï¼ˆä»æ–‡ä»¶æˆ–æ ‡å‡†è¾“å…¥ï¼‰
+ * - æ–‡æ³•çš„å¢å¹¿ï¼ˆæ·»åŠ æ–°çš„å¼€å§‹ç¬¦å·ï¼‰
+ * - ç»ˆç»“ç¬¦å’Œéç»ˆç»“ç¬¦çš„è‡ªåŠ¨è¯†åˆ«
+ * - æ–‡æ³•éªŒè¯å’Œé”™è¯¯æ£€æµ‹
+ *
+ * @author ZJJ
+ * @date 2025.6.19
+ * @version 3.0
  */
 
 #include "grammar.h"
@@ -11,6 +20,7 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include <queue>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -18,7 +28,7 @@
 #include <fcntl.h>
 #include <locale.h>
 
-// ÉèÖÃ¿ØÖÆÌ¨±àÂëÎªUTF-8
+// è®¾ç½®æ§åˆ¶å°ç¼–ç ä¸ºUTF-8
 static bool initConsoleUTF8() {
     SetConsoleOutputCP(65001);
     SetConsoleCP(65001);
@@ -29,22 +39,22 @@ static bool initConsoleUTF8() {
 static bool utf8_initialized = initConsoleUTF8();
 #endif
 
-// È«¾Ö¾²Ä¬Ä£Ê½¿ØÖÆ±äÁ¿
+// å…¨å±€é™é»˜æ¨¡å¼æ§åˆ¶å˜é‡
 bool g_silent_mode = false;
 
  /**
-  * @brief ½«²úÉúÊ½×ª»»Îª×Ö·û´®±íÊ¾
-  * @return ²úÉúÊ½µÄ×Ö·û´®ĞÎÊ½
+  * @brief å°†äº§ç”Ÿå¼è½¬æ¢ä¸ºå­—ç¬¦ä¸²è¡¨ç¤º
+  * @return äº§ç”Ÿå¼çš„å­—ç¬¦ä¸²å½¢å¼
   *
-  * ¸ñÊ½£ºA -> ¦Á
-  * ÌØÊâ´¦Àí£º
-  * - ¿Õ²úÉúÊ½ÏÔÊ¾Îª A -> ¦Å
-  * - ¶à·ûºÅ²úÉúÊ½ÓÃ¿Õ¸ñ·Ö¸ô
+  * æ ¼å¼ï¼šA -> Î±
+  * ç‰¹æ®Šå¤„ç†ï¼š
+  * - ç©ºäº§ç”Ÿå¼æ˜¾ç¤ºä¸º A -> Îµ
+  * - å¤šç¬¦å·äº§ç”Ÿå¼ç”¨ç©ºæ ¼åˆ†éš”
   */
 std::string Production::toString() const {
     std::string result = left + " -> ";
-    if (right.empty() || (right.size() == 1 && right[0] == "¦Å")) {
-        result += "¦Å";
+    if (right.empty() || (right.size() == 1 && right[0] == "?")) {
+        result += "?";
     }
     else {
         for (size_t i = 0; i < right.size(); ++i) {
@@ -56,51 +66,69 @@ std::string Production::toString() const {
 }
 
 /**
- * @brief ÎÄ·¨ÀàµÄÄ¬ÈÏ¹¹Ôìº¯Êı
+ * @brief æ–‡æ³•ç±»çš„é»˜è®¤æ„é€ å‡½æ•°
  */
 Grammar::Grammar() {}
 
 /**
- * @brief ´ÓÎÄ¼ş¶ÁÈ¡ÎÄ·¨
- * @param filename ÎÄ·¨ÎÄ¼şÂ·¾¶
- * @return ³É¹¦¶ÁÈ¡·µ»Øtrue£¬·ñÔò·µ»Øfalse
+ * @brief ä»æŒ‡å®šæ–‡ä»¶è¯»å–å¹¶è§£ææ–‡æ³•
+ * 
+ * æ–‡ä»¶è§£æè¿‡ç¨‹ï¼š
+ * 1. é€è¡Œè¯»å–æ–‡ä»¶å†…å®¹
+ * 2. è·³è¿‡ç©ºè¡Œå’Œä»¥#å¼€å¤´çš„æ³¨é‡Šè¡Œ
+ * 3. å¯¹æ¯ä¸€è¡Œè¿›è¡Œæ ¼å¼éªŒè¯
+ * 4. è§£æäº§ç”Ÿå¼å¹¶æ·»åŠ åˆ°æ–‡æ³•ä¸­
+ * 5. æ‰§è¡Œå®Œæ•´çš„æ–‡æ³•éªŒè¯
+ * 
+ * @param filename æ–‡æ³•æ–‡ä»¶çš„è·¯å¾„
+ * @return æ–‡ä»¶æˆåŠŸè¯»å–ä¸”æ–‡æ³•éªŒè¯é€šè¿‡è¿”å›trueï¼Œå¦åˆ™è¿”å›false
  *
- * ÎÄ¼ş¸ñÊ½£º
- * - Ã¿ĞĞÒ»¸ö²úÉúÊ½£¬¸ñÊ½Îª A -> alpha | beta
- * - ÒÔ#¿ªÍ·µÄĞĞÎª×¢ÊÍ£¬»á±»ºöÂÔ
- * - ¿ÕĞĞ»á±»ºöÂÔ
- * - Ö§³Ö¶àÑ¡Ôñ·ÖÖ§£¨ÓÃ|·Ö¸ô£©
+ * æ”¯æŒçš„æ–‡ä»¶æ ¼å¼ï¼š
+ * - æ¯è¡Œä¸€ä¸ªäº§ç”Ÿå¼ï¼Œæ ¼å¼ä¸º A -> alpha | beta
+ * - ä»¥#å¼€å¤´çš„è¡Œä¸ºæ³¨é‡Šï¼Œä¼šè¢«å¿½ç•¥
+ * - ç©ºè¡Œä¼šè¢«å¿½ç•¥
+ * - æ”¯æŒå¤šé€‰æ‹©åˆ†æ”¯ï¼ˆç”¨|åˆ†éš”ï¼‰
  */
 bool Grammar::loadFromFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        std::cerr << "ÎŞ·¨´ò¿ªÎÄ¼ş: " << filename << std::endl;
+        reportError("Error: Cannot open file: " + filename);
         return false;
     }
 
     std::string line;
+    int lineNumber = 0;
+    
     while (std::getline(file, line)) {
-        // ºöÂÔ¿ÕĞĞºÍ×¢ÊÍĞĞ
-        if (!line.empty() && line[0] != '#') {
-            parseProduction(line);
+        lineNumber++;
+        
+        // å¿½ç•¥ç©ºè¡Œå’Œæ³¨é‡Šè¡Œ
+        if (line.empty() || line[0] == '#') {
+            continue;
         }
+        
+        // æ£€æŸ¥åˆæ³•æ€§
+        if (!isValidProductionFormat(line)) {
+            reportError("Error: Invalid production format at line " + std::to_string(lineNumber) + ": " + line);
+            return false;
+        }
+        
+        parseProduction(line);
     }
 
-    // ´Ó²úÉúÊ½ÖĞÌáÈ¡ÖÕ½á·ûºÍ·ÇÖÕ½á·û
-    extractSymbols();
-    return true;
+    return validateGrammar();
 }
 
 /**
- * @brief ´Ó±ê×¼ÊäÈë¶ÁÈ¡ÎÄ·¨
+ * @brief ä»æ ‡å‡†è¾“å…¥è¯»å–æ–‡æ³•
  *
- * Ìá¹©½»»¥Ê½ÊäÈë½çÃæ£¬ÏÔÊ¾¸ñÊ½ËµÃ÷ºÍÊ¾Àı¡£
- * ÓÃ»§ÊäÈë¿ÕĞĞÊ±½áÊøÊäÈë¡£
+ * æä¾›äº¤äº’å¼è¾“å…¥ç•Œé¢ï¼Œæ˜¾ç¤ºæ ¼å¼è¯´æ˜å’Œç¤ºä¾‹ã€‚
+ * ç”¨æˆ·è¾“å…¥ç©ºè¡Œæ—¶ç»“æŸè¾“å…¥ã€‚
  */
 void Grammar::loadFromInput() {
-    std::cout << "ÇëÊäÈëÎÄ·¨£¨Ã¿ĞĞÒ»¸ö²úÉúÊ½£¬¿ÕĞĞ½áÊø£©£º" << std::endl;
-    std::cout << "¸ñÊ½£ºA -> alpha | beta" << std::endl;
-    std::cout << "Ê¾Àı£ºE -> E + T | T" << std::endl;
+    std::cout << "Enter grammar (one production per line, empty line to end):" << std::endl;
+    std::cout << "Format: A -> alpha | beta" << std::endl;
+    std::cout << "Example: E -> E + T | T" << std::endl;
 
     std::string line;
     while (std::getline(std::cin, line)) {
@@ -112,18 +140,21 @@ void Grammar::loadFromInput() {
 }
 
 /**
- * @brief ½âÎöµ¥ĞĞ²úÉúÊ½×Ö·û´®
- * @param line °üº¬²úÉúÊ½µÄ×Ö·û´®
+ * @brief è§£æå•è¡Œäº§ç”Ÿå¼å­—ç¬¦ä¸²å¹¶æ·»åŠ åˆ°æ–‡æ³•ä¸­
+ * 
+ * è§£ææ­¥éª¤ï¼š
+ * 1. æŸ¥æ‰¾ "->" åˆ†éš”ç¬¦ï¼Œåˆ†ç¦»å·¦éƒ¨å’Œå³éƒ¨
+ * 2. å»é™¤å·¦éƒ¨çš„ç©ºç™½å­—ç¬¦ï¼Œè·å¾—éç»ˆç»“ç¬¦
+ * 3. å¤„ç†å³éƒ¨çš„å¤šä¸ªé€‰æ‹©åˆ†æ”¯ï¼ˆç”¨|åˆ†éš”ï¼‰
+ * 4. å¯¹æ¯ä¸ªåˆ†æ”¯ï¼ŒæŒ‰ç©ºæ ¼åˆ†ç¦»å„ä¸ªç¬¦å·
+ * 5. åˆ›å»ºäº§ç”Ÿå¼å¯¹è±¡å¹¶æ·»åŠ åˆ°äº§ç”Ÿå¼åˆ—è¡¨
+ * 
+ * @param line åŒ…å«äº§ç”Ÿå¼çš„å­—ç¬¦ä¸²
  *
- * ½âÎö¸ñÊ½Îª "A -> alpha | beta" µÄ²úÉúÊ½£º
- * 1. ²éÕÒ "->" ·Ö¸ô·û
- * 2. ÌáÈ¡×ó²¿·ÇÖÕ½á·û
- * 3. ´¦ÀíÓÒ²¿µÄ¶à¸öÑ¡Ôñ·ÖÖ§£¨ÓÃ|·Ö¸ô£©
- * 4. ½«Ã¿¸ö·ûºÅ·ÖÀë²¢´´½¨²úÉúÊ½¶ÔÏó
- *
- * ÌØÊâ´¦Àí£º
- * - ×Ô¶¯È¥³ı¿Õ°××Ö·û
- * - ¿ÕÓÒ²¿×ª»»Îª¦Å²úÉúÊ½
+ * ç‰¹æ®Šå¤„ç†ï¼š
+ * - è‡ªåŠ¨å»é™¤å¤šä½™çš„ç©ºç™½å­—ç¬¦
+ * - ç©ºå³éƒ¨è‡ªåŠ¨è½¬æ¢ä¸ºÎµäº§ç”Ÿå¼
+ * - æ”¯æŒ A -> alpha | beta çš„å¤šé€‰æ‹©æ ¼å¼
  */
 void Grammar::parseProduction(const std::string& line) {
     size_t arrowPos = line.find("->");
@@ -132,10 +163,10 @@ void Grammar::parseProduction(const std::string& line) {
     std::string left = line.substr(0, arrowPos);
     std::string right = line.substr(arrowPos + 2);
 
-    // È¥³ı×ó²¿µÄ¿Õ¸ñ
+    // å»é™¤å·¦éƒ¨ç©ºç™½å­—ç¬¦
     left.erase(std::remove_if(left.begin(), left.end(), ::isspace), left.end());
 
-    // ´¦ÀíÓÒ²¿µÄ¶à¸öÑ¡Ôñ£¨ÓÃ|·Ö¸ô£©
+    // å¤„ç†å³éƒ¨çš„å¤šä¸ªé€‰æ‹©åˆ†æ”¯ï¼ˆç”¨|åˆ†éš”ï¼‰
     std::stringstream ss(right);
     std::string choice;
 
@@ -144,14 +175,14 @@ void Grammar::parseProduction(const std::string& line) {
         std::stringstream choiceSS(choice);
         std::string symbol;
 
-        // ·ÖÀëÃ¿¸ö·ûºÅ
+        // æå–å³éƒ¨ç¬¦å·
         while (choiceSS >> symbol) {
             symbols.push_back(symbol);
         }
 
-        // Èç¹ûÓÒ²¿Îª¿Õ£¬Ìí¼Ó¦Å²úÉúÊ½
+        // å¤„ç†ç©ºå³éƒ¨
         if (symbols.empty()) {
-            symbols.push_back("¦Å");
+            symbols.push_back("?");
         }
 
         productions.emplace_back(left, symbols);
@@ -159,93 +190,287 @@ void Grammar::parseProduction(const std::string& line) {
 }
 
 /**
- * @brief ´Ó²úÉúÊ½ÖĞÌáÈ¡ÖÕ½á·ûºÍ·ÇÖÕ½á·û
+ * @brief ä»äº§ç”Ÿå¼ä¸­æå–ç»ˆç»“ç¬¦å’Œéç»ˆç»“ç¬¦
  *
- * Ëã·¨²½Öè£º
- * 1. µÚÒ»±éÉ¨Ãè£º½«ËùÓĞ³öÏÖÔÚ²úÉúÊ½×ó²¿µÄ·ûºÅ±ê¼ÇÎª·ÇÖÕ½á·û
- * 2. µÚ¶ş±éÉ¨Ãè£º½«³öÏÖÔÚ²úÉúÊ½ÓÒ²¿µ«²»ÊÇ·ÇÖÕ½á·ûµÄ·ûºÅ±ê¼ÇÎªÖÕ½á·û
- * 3. È·¶¨¿ªÊ¼·ûºÅ£ºµÚÒ»¸ö²úÉúÊ½µÄ×ó²¿
+ * ç®—æ³•æ­¥éª¤ï¼š
+ * 1. ç¬¬ä¸€éæ‰«æï¼šå°†æ‰€æœ‰å‡ºç°åœ¨äº§ç”Ÿå¼å·¦éƒ¨çš„ç¬¦å·æ ‡è®°ä¸ºéç»ˆç»“ç¬¦
+ * 2. ç¬¬äºŒéæ‰«æï¼šå°†å‡ºç°åœ¨äº§ç”Ÿå¼å³éƒ¨ä½†ä¸æ˜¯éç»ˆç»“ç¬¦çš„ç¬¦å·æ ‡è®°ä¸ºç»ˆç»“ç¬¦
+ * 3. ç¡®å®šå¼€å§‹ç¬¦å·ï¼šç¬¬ä¸€ä¸ªäº§ç”Ÿå¼çš„å·¦éƒ¨
  *
- * ×¢Òâ£º¦Å²»±»ÊÓÎªÖÕ½á·û
+ * æ³¨æ„ï¼šÎµä¸è¢«è§†ä¸ºç»ˆç»“ç¬¦
  */
 void Grammar::extractSymbols() {
-    // µÚÒ»±é£ºÌáÈ¡ËùÓĞ·ÇÖÕ½á·û
+    // ç¬¬ä¸€éï¼šæå–æ‰€æœ‰éç»ˆç»“ç¬¦
     for (const auto& prod : productions) {
         nonterminals.insert(prod.left);
     }
 
-    // µÚ¶ş±é£ºÌáÈ¡ÖÕ½á·û
+    // ç¬¬äºŒéï¼šæå–æ‰€æœ‰ç»ˆç»“ç¬¦
     for (const auto& prod : productions) {
         for (const auto& symbol : prod.right) {
-            // Èç¹û·ûºÅ²»ÊÇ¦ÅÇÒ²»ÊÇ·ÇÖÕ½á·û£¬ÔòÎªÖÕ½á·û
-            if (symbol != "¦Å" && nonterminals.find(symbol) == nonterminals.end()) {
+            // åªå°†éç»ˆç»“ç¬¦ä»¥å¤–çš„ç¬¦å·æ ‡è®°ä¸ºç»ˆç»“ç¬¦
+            if (symbol != "?" && nonterminals.find(symbol) == nonterminals.end()) {
                 terminals.insert(symbol);
             }
         }
     }
 
-    // ÉèÖÃ¿ªÊ¼·ûºÅÎªµÚÒ»¸ö²úÉúÊ½µÄ×ó²¿
+    // ç¡®å®šå¼€å§‹ç¬¦å·
     if (!productions.empty()) {
         startSymbol = productions[0].left;
     }
 }
 
+
 /**
- * @brief Ôö¹ãÎÄ·¨
+ * @brief å¢å¹¿æ–‡æ³•
  *
- * ÎªLR·ÖÎöÌí¼ÓĞÂµÄ¿ªÊ¼·ûºÅ£¬¹æÔò£º
- * 1. ´´½¨ĞÂ¿ªÊ¼·ûºÅ£ºÔ­¿ªÊ¼·ûºÅ + "'"
- * 2. ÔÚ²úÉúÊ½ÁĞ±í¿ªÍ·²åÈëĞÂ²úÉúÊ½£ºS' -> S
- * 3. ½«ĞÂ·ûºÅÌí¼Óµ½·ÇÖÕ½á·û¼¯ºÏ
- * 4. ¸üĞÂ¿ªÊ¼·ûºÅ
+ * ä¸ºLRåˆ†ææ·»åŠ æ–°çš„å¼€å§‹ç¬¦å·ï¼Œè§„åˆ™ï¼š
+ * 1. åˆ›å»ºæ–°å¼€å§‹ç¬¦å·ï¼šåŸå¼€å§‹ç¬¦å· + "'"
+ * 2. åœ¨äº§ç”Ÿå¼åˆ—è¡¨å¼€å¤´æ’å…¥æ–°äº§ç”Ÿå¼ï¼šS' -> S
+ * 3. å°†æ–°ç¬¦å·æ·»åŠ åˆ°éç»ˆç»“ç¬¦é›†åˆ
+ * 4. æ›´æ–°å¼€å§‹ç¬¦å·
  *
- * ÀıÈç£ºE -> E + T | T  Ôö¹ãºó±äÎª£º
+ * ä¾‹å¦‚ï¼šE -> E + T | T  å¢å¹¿åå˜ä¸ºï¼š
  *      E' -> E
  *      E -> E + T | T
  */
 void Grammar::augment() {
-    // ¼ì²éÊÇ·ñÒÑ¾­Ôö¹ã¹ı£¨¿ªÊ¼·ûºÅÒÔµ¥ÒıºÅ½áÎ²£©
+    // æ£€æŸ¥æ˜¯å¦å·²ç»å¢å¹¿è¿‡ï¼ˆå¼€å§‹ç¬¦å·ä»¥å•å¼•å·ç»“å°¾ï¼‰
     if (startSymbol.back() == '\'') {
-        return; // ÒÑ¾­Ôö¹ã¹ı£¬²»ĞèÒªÖØ¸´Ôö¹ã
+        return; // å·²ç»å¢å¹¿è¿‡ï¼Œç›´æ¥è¿”å›
     }
     
     std::string newStart = startSymbol + "'";
     productions.insert(productions.begin(), Production(newStart, { startSymbol }));
     nonterminals.insert(newStart);
     startSymbol = newStart;
-    
-    // Ìí¼Ó$·ûºÅµ½ÖÕ½á·û¼¯ºÏ£¨±íÊ¾ÊäÈë½áÊø£©
+
+    // æ·»åŠ ç»“æŸç¬¦å·
     terminals.insert("$");
 }
 
 /**
- * @brief ´òÓ¡ÎÄ·¨µÄÍêÕûĞÅÏ¢
+ * @brief æ‰“å°æ–‡æ³•çš„å®Œæ•´ä¿¡æ¯
  *
- * Êä³öÄÚÈİ£º
- * 1. ËùÓĞ²úÉúÊ½£¨´ø±àºÅ£¬±ãÓÚÔÚ·ÖÎöÖĞÒıÓÃ£©
- * 2. ·ÇÖÕ½á·û¼¯ºÏ
- * 3. ÖÕ½á·û¼¯ºÏ
- * 4. ¿ªÊ¼·ûºÅ
+ * è¾“å‡ºå†…å®¹ï¼š
+ * 1. æ‰€æœ‰äº§ç”Ÿå¼ï¼ˆå¸¦ç¼–å·ï¼Œä¾¿äºåœ¨åˆ†æä¸­å¼•ç”¨ï¼‰
+ * 2. éç»ˆç»“ç¬¦é›†åˆ
+ * 3. ç»ˆç»“ç¬¦é›†åˆ
+ * 4. å¼€å§‹ç¬¦å·
  *
- * ÕâĞ©ĞÅÏ¢¶ÔÓÚÀí½âÎÄ·¨½á¹¹ºÍµ÷ÊÔLR·ÖÎö¹ı³Ì·Ç³£ÓĞÓÃ¡£
+ * è¿™äº›ä¿¡æ¯å¯¹äºç†è§£æ–‡æ³•ç»“æ„å’Œè°ƒè¯•LRåˆ†æè¿‡ç¨‹éå¸¸æœ‰ç”¨ã€‚
  */
 void Grammar::print() const {
-    std::cout << "ÎÄ·¨²úÉúÊ½£º" << std::endl;
+    std::cout << "Grammar Productions:" << std::endl;
     for (size_t i = 0; i < productions.size(); ++i) {
         std::cout << i << ": " << productions[i].toString() << std::endl;
     }
 
-    std::cout << "\n·ÇÖÕ½á·û£º";
+    std::cout << "\nNonterminals:";
     for (const auto& nt : nonterminals) {
         std::cout << " " << nt;
     }
     std::cout << std::endl;
 
-    std::cout << "ÖÕ½á·û£º";
+    std::cout << "Terminals:";
     for (const auto& t : terminals) {
         std::cout << " " << t;
     }
     std::cout << std::endl;
 
-    std::cout << "¿ªÊ¼·ûºÅ£º" << startSymbol << std::endl;
+    std::cout << "Start Symbol: " << startSymbol << std::endl;
+}
+
+/**
+ * @brief éªŒè¯æ–‡æ³•çš„å®Œæ•´æ€§å’Œæ­£ç¡®æ€§
+ * 
+ * æ‰§è¡Œä»¥ä¸‹éªŒè¯æ­¥éª¤ï¼š
+ * 1. æ£€æŸ¥æ–‡æ³•æ˜¯å¦ä¸ºç©ºï¼ˆæ— äº§ç”Ÿå¼ï¼‰
+ * 2. æå–å¹¶éªŒè¯ç»ˆç»“ç¬¦å’Œéç»ˆç»“ç¬¦
+ * 3. éªŒè¯èµ·å§‹ç¬¦å·çš„å­˜åœ¨æ€§
+ * 4. æ£€æŸ¥æ‰€æœ‰éç»ˆç»“ç¬¦æ˜¯å¦éƒ½èƒ½æ¨å¯¼å‡ºç»ˆç»“ç¬¦ä¸²
+ * 5. æ£€æŸ¥æ˜¯å¦å­˜åœ¨ä»èµ·å§‹ç¬¦å·æ— æ³•åˆ°è¾¾çš„äº§ç”Ÿå¼
+ * 
+ * @return æ–‡æ³•å®Œå…¨æœ‰æ•ˆè¿”å›trueï¼Œå‘ç°ä»»ä½•é”™è¯¯è¿”å›false
+ */
+bool Grammar::validateGrammar() {
+    // 1. æ£€æŸ¥ç©ºæ–‡æ³•
+    if (productions.empty()) {
+        reportError("Error: Grammar file is empty, no productions found");
+        return false;
+    }
+    
+    // 2. æå–ç¬¦å·
+    extractSymbols();
+    
+    // 3. æ£€æŸ¥èµ·å§‹ç¬¦å·
+    if (startSymbol.empty()) {
+        reportError("Error: No start symbol found");
+        return false;
+    }
+    // 4. æ£€æŸ¥ç¬¦å·å¯è¾¾æ€§
+    if (!hasReachableSymbols()) {
+        return false;
+    }
+    
+    // 5. æ£€æŸ¥æ— ç”¨äº§ç”Ÿå¼
+    if (!checkReachableProductions()) {
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * @brief éªŒè¯äº§ç”Ÿå¼çš„è¯­æ³•æ ¼å¼
+ * 
+ * æ£€æŸ¥äº§ç”Ÿå¼æ˜¯å¦ç¬¦åˆæ ‡å‡†æ ¼å¼ï¼š
+ * - å¿…é¡»åŒ…å« "->" åˆ†éš”ç¬¦
+ * - å·¦éƒ¨ä¸èƒ½ä¸ºç©º
+ * - å·¦éƒ¨å¿…é¡»æ˜¯æœ‰æ•ˆçš„éç»ˆç»“ç¬¦æ ‡è¯†ç¬¦
+ * 
+ * @param line å¾…éªŒè¯çš„äº§ç”Ÿå¼å­—ç¬¦ä¸²
+ * @return æ ¼å¼å®Œå…¨æ­£ç¡®è¿”å›trueï¼Œå­˜åœ¨æ ¼å¼é”™è¯¯è¿”å›false
+ */
+bool Grammar::isValidProductionFormat(const std::string& line) {
+    // æ£€æŸ¥æ˜¯å¦åŒ…å« "->" åˆ†éš”ç¬¦
+    size_t arrowPos = line.find("->");
+    if (arrowPos == std::string::npos) {
+        return false;
+    }
+    
+    // æ£€æŸ¥å·¦éƒ¨æ˜¯å¦ä¸ºç©º
+    std::string left = line.substr(0, arrowPos);
+    left.erase(std::remove_if(left.begin(), left.end(), ::isspace), left.end());
+    if (left.empty()) {
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * @brief æ£€æŸ¥æ‰€æœ‰éç»ˆç»“ç¬¦æ˜¯å¦éƒ½èƒ½æ¨å¯¼å‡ºç»ˆç»“ç¬¦ä¸²
+ * 
+ * ä½¿ç”¨å›ºå®šç‚¹ç®—æ³•è¿­ä»£è®¡ç®—ï¼š
+ * 1. åˆå§‹åŒ–æ‰€æœ‰ç»ˆç»“ç¬¦ä¸ºå¯æ¨å¯¼
+ * 2. è¿­ä»£æ£€æŸ¥æ¯ä¸ªäº§ç”Ÿå¼ï¼Œå¦‚æœå³éƒ¨æ‰€æœ‰ç¬¦å·éƒ½å¯æ¨å¯¼ï¼Œåˆ™å·¦éƒ¨ä¹Ÿå¯æ¨å¯¼
+ * 3. é‡å¤ç›´åˆ°æ²¡æœ‰æ–°çš„å¯æ¨å¯¼ç¬¦å·è¢«å‘ç°
+ * 4. æ£€æŸ¥æ˜¯å¦æ‰€æœ‰éç»ˆç»“ç¬¦éƒ½åœ¨å¯æ¨å¯¼é›†åˆä¸­
+ * 
+ * @return æ‰€æœ‰éç»ˆç»“ç¬¦éƒ½èƒ½æ¨å¯¼å‡ºç»ˆç»“ç¬¦ä¸²è¿”å›trueï¼Œå­˜åœ¨æ— æ³•æ¨å¯¼çš„éç»ˆç»“ç¬¦è¿”å›false
+ */
+bool Grammar::hasReachableSymbols() {
+    // æ£€æŸ¥æ‰€æœ‰éç»ˆç»“ç¬¦æ˜¯å¦éƒ½èƒ½æ¨å¯¼å‡ºç»ˆç»“ç¬¦ä¸²
+    std::set<std::string> canDeriveTerminals;
+    std::set<std::string> visited;
+    
+    // é¦–å…ˆï¼Œæ ‡è®°æ‰€æœ‰ç»ˆç»“ç¬¦ä¸ºå¯æ¨å¯¼
+    for (const auto& terminal : terminals) {
+        canDeriveTerminals.insert(terminal);
+    }
+    
+    // è¿­ä»£æŸ¥æ‰¾èƒ½æ¨å¯¼å‡ºç»ˆç»“ç¬¦çš„éç»ˆç»“ç¬¦
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (const auto& prod : productions) {
+            if (canDeriveTerminals.find(prod.left) != canDeriveTerminals.end()) {
+                continue; // å·²æ ‡è®°ä¸ºå¯æ¨å¯¼
+            }
+            
+            // æ£€æŸ¥æ­¤äº§ç”Ÿå¼æ˜¯å¦èƒ½æ¨å¯¼å‡ºç»ˆç»“ç¬¦
+            bool canDerive = true;
+            for (const auto& symbol : prod.right) {
+                if (symbol == "Îµ") {
+                    continue; // Îµæ€»æ˜¯å¯æ¨å¯¼çš„
+                }
+                if (canDeriveTerminals.find(symbol) == canDeriveTerminals.end()) {
+                    canDerive = false;
+                    break;
+                }
+            }
+            
+            if (canDerive) {
+                canDeriveTerminals.insert(prod.left);
+                changed = true;
+            }
+        }
+    }
+
+    // æ£€æŸ¥ä»»ä½•éç»ˆç»“ç¬¦æ˜¯å¦æ— æ³•æ¨å¯¼å‡ºç»ˆç»“ç¬¦
+    for (const auto& nt : nonterminals) {
+        if (nt.back() == '\'') continue; // è·³è¿‡æ¨å¹¿ç¬¦å·
+        if (canDeriveTerminals.find(nt) == canDeriveTerminals.end()) {
+            reportError("Error: Nonterminal '" + nt + "' cannot derive any terminal string");
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+/**
+ * @brief æŠ¥å‘Šé”™è¯¯ä¿¡æ¯
+ * @param message é”™è¯¯æ¶ˆæ¯
+ */
+void Grammar::reportError(const std::string& message) {
+    if (!g_silent_mode) {
+        std::cerr << message << std::endl;
+    }
+}
+
+/**
+ * @brief æ£€æµ‹ä»èµ·å§‹ç¬¦å·æ— æ³•åˆ°è¾¾çš„äº§ç”Ÿå¼å’Œç¬¦å·
+ * 
+ * ä½¿ç”¨å¹¿åº¦ä¼˜å…ˆæœç´¢ç®—æ³•ï¼š
+ * 1. ä»èµ·å§‹ç¬¦å·å¼€å§‹ï¼Œå°†å…¶åŠ å…¥å¯è¾¾ç¬¦å·é›†åˆ
+ * 2. éå†æ‰€æœ‰ä»¥å¯è¾¾ç¬¦å·ä¸ºå·¦éƒ¨çš„äº§ç”Ÿå¼
+ * 3. å°†äº§ç”Ÿå¼å³éƒ¨çš„æ‰€æœ‰ç¬¦å·æ ‡è®°ä¸ºå¯è¾¾
+ * 4. é‡å¤æ­¤è¿‡ç¨‹ç›´åˆ°æ²¡æœ‰æ–°çš„å¯è¾¾ç¬¦å·
+ * 5. æ£€æŸ¥æ˜¯å¦å­˜åœ¨ä¸å¯è¾¾çš„éç»ˆç»“ç¬¦
+ * 
+ * @return æ‰€æœ‰éç»ˆç»“ç¬¦éƒ½ä»èµ·å§‹ç¬¦å·å¯è¾¾è¿”å›trueï¼Œå­˜åœ¨ä¸å¯è¾¾ç¬¦å·è¿”å›false
+ */
+bool Grammar::checkReachableProductions() {
+    std::set<std::string> reachableSymbols;
+    std::queue<std::string> toProcess;
+    
+    // ä»èµ·å§‹ç¬¦å·å¼€å§‹
+    reachableSymbols.insert(startSymbol);
+    toProcess.push(startSymbol);
+    
+    // ä½¿ç”¨ BFS æŸ¥æ‰¾æ‰€æœ‰å¯è¾¾ç¬¦å·
+    while (!toProcess.empty()) {
+        std::string current = toProcess.front();
+        toProcess.pop();
+        
+        // æŸ¥æ‰¾æ‰€æœ‰å·¦éƒ¨ä¸ºå½“å‰ç¬¦å·çš„äº§ç”Ÿå¼
+        for (const auto& prod : productions) {
+            if (prod.left == current) {
+                // å°†å³éƒ¨æ‰€æœ‰ç¬¦å·åŠ å…¥å¯è¾¾é›†åˆ
+                for (const auto& symbol : prod.right) {
+                    if (symbol != "Îµ" && reachableSymbols.find(symbol) == reachableSymbols.end()) {
+                        reachableSymbols.insert(symbol);
+                        // å¦‚æœæ˜¯éç»ˆç»“ç¬¦ï¼Œåˆ™åŠ å…¥å¾…å¤„ç†é˜Ÿåˆ—
+                        if (nonterminals.find(symbol) != nonterminals.end()) {
+                            toProcess.push(symbol);
+                        }
+                    }
+                }
+            }
+        }
+    }
+        
+    // æ£€æŸ¥ä¸å¯è¾¾çš„éç»ˆç»“ç¬¦
+    for (const auto& nt : nonterminals) {
+        if (nt.back() == '\'') continue; 
+        if (reachableSymbols.find(nt) == reachableSymbols.end()) {
+            reportError("Error: Nonterminal '" + nt + "' is unreachable from start symbol '" + startSymbol + "'");
+            return false;
+        }
+    }
+    
+    return true;
 }
