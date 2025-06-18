@@ -1,13 +1,13 @@
 /**
  * @file grammar.h
- * @brief �������޹��ķ��Ķ���ʹ���
+ * @brief 上下文无关文法的定义和处理
  *
- * ���ļ��������������޹��ķ��ı�ʾ�ͻ���������������
- * - ����ʽ�ı�ʾ�Ͳ���
- * - �ķ��Ĵ洢�͹���
- * - �ķ��Ķ�ȡ�����ļ����׼���룩
- * - �ķ������㣨�����µĿ�ʼ���ţ�
- * - �ս���ͷ��ս�����Զ�ʶ��
+ * 本文件定义了上下文无关文法的表示和基本操作，包括：
+ * - 产生式的表示和操作
+ * - 文法的存储和管理
+ * - 文法的读取（从文件或标准输入）
+ * - 文法的增广（添加新的开始符号）
+ * - 终结符和非终结符的自动识别
  *
  * @author ZJJ
  * @date 2025.6.19
@@ -23,27 +23,27 @@
 #include <map>
 #include <iostream>
 
-// ȫ�־�Ĭģʽ���Ʊ�������
+// 全局静默模式控制变量声明
 extern bool g_silent_mode;
 
 /**
  * @class Production
- * @brief ��ʾһ���ķ�����ʽ
+ * @brief 表示一个文法产生式
  *
- * ����ʽ���ķ��Ļ�����ɵ�λ����ʽΪ A �� �������У�
- * - A�Ƿ��ս��������ʽ���󲿣�
- * - ���Ƿ��Ŵ�������ʽ���Ҳ������ܰ����ս���ͷ��ս����
+ * 产生式是文法的基本组成单位，形式为 A → α，其中：
+ * - A是非终结符（产生式的左部）
+ * - α是符号串（产生式的右部，可能包含终结符和非终结符）
  *
- * ʹ��ʾ����
+ * 使用示例：
  * @code
-  * Production prod("E", {"E", "+", "T"});  // E �� E + T
-  * Production epsilon("A", {"��"});         // A �� �� (�ղ���ʽ)
+  * Production prod("E", {"E", "+", "T"});  // E → E + T
+  * Production epsilon("A", {"ε"});         // A → ε (空产生式)
   * @endcode
   */
 class Production {
 public:
-    std::string left;                    ///< ����ʽ�󲿣����ս����
-    std::vector<std::string> right;      ///< ����ʽ�Ҳ������Ŵ���
+    std::string left;                    ///< 产生式左部（非终结符）
+    std::vector<std::string> right;      ///< 产生式右部（符号串）
 
     Production(const std::string& l, const std::vector<std::string>& r)
     : left(l), right(r) {}
@@ -57,46 +57,46 @@ public:
 
 /**
  * @class Grammar
- * @brief �������޹��ķ���
+ * @brief 上下文无关文法类
  *
- * �������������������޹��ķ����ṩ���¹��ܣ�
- * 1. �ķ��Ĵ洢�͹���
- * 2. ���ļ����׼�����ȡ�ķ�
- * 3. �Զ�ʶ���ս���ͷ��ս��
- * 4. �ķ����㣨ΪLR������׼����
- * 5. �ķ���Ϣ��չʾ
+ * 这个类管理整个上下文无关文法，提供以下功能：
+ * 1. 文法的存储和管理
+ * 2. 从文件或标准输入读取文法
+ * 3. 自动识别终结符和非终结符
+ * 4. 文法增广（为LR分析做准备）
+ * 5. 文法信息的展示
  *
- * �ķ������ʽ��
- * - ÿ��һ������ʽ
- * - ��ʽ��A -> alpha | beta
- * - ֧�ֶ�ѡ���֧����|�ָ���
- * - ֧�ֿղ���ʽ���æű�ʾ��
- * - ֧��ע���У���#��ͷ��
+ * 文法输入格式：
+ * - 每行一个产生式
+ * - 格式：A -> alpha | beta
+ * - 支持多选择分支（用|分隔）
+ * - 支持空产生式（用ε表示）
+ * - 支持注释行（以#开头）
  *
- * ʹ��ʾ����
+ * 使用示例：
  * @code
  * Grammar grammar;
  * grammar.loadFromFile("expr.txt");
- * grammar.augment();  // ΪLR���������ķ�
- * grammar.print();    // ��ʾ�ķ���Ϣ
+ * grammar.augment();  // 为LR分析增广文法
+ * grammar.print();    // 显示文法信息
  * @endcode
  */
 class Grammar {
 private:
-    std::vector<Production> productions;    ///< �ķ������в���ʽ
-    std::set<std::string> nonterminals;    ///< ���ս������
-    std::set<std::string> terminals;       ///< �ս������
-    std::string startSymbol;               ///< ��ʼ����
+    std::vector<Production> productions;    ///< 文法的所有产生式
+    std::set<std::string> nonterminals;    ///< 非终结符集合
+    std::set<std::string> terminals;       ///< 终结符集合
+    std::string startSymbol;               ///< 开始符号
 
     void parseProduction(const std::string& line);
     void extractSymbols();
     
-    // ��֤�ķ��������Ժ͸�ʽ
-    bool validateGrammar();                                   // ����ķ��Ƿ�����
-    bool isValidProductionFormat(const std::string& line);    // ������ʽ��ʽ�Ƿ���ȷ
-    bool hasReachableSymbols();                               // ����Ƿ��пɴ���ţ����棩
-    bool checkReachableProductions();                         // ���ɴ����ʽ
-    void reportError(const std::string& message);             // ���������Ϣ
+    // 验证文法的完整性和格式
+    bool validateGrammar();                                   // 检查文法是否完整
+    bool isValidProductionFormat(const std::string& line);    // 检查产生式格式是否正确
+    bool hasReachableSymbols();                               // 检查是否有可达符号（警告）
+    bool checkReachableProductions();                         // 检查可达产生式
+    void reportError(const std::string& message);             // 报告错误信息
 
 public:
 

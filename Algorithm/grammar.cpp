@@ -98,9 +98,12 @@ bool Grammar::loadFromFile(const std::string& filename) {
 
     std::string line;
     int lineNumber = 0;
-    
-    while (std::getline(file, line)) {
+      while (std::getline(file, line)) {
         lineNumber++;
+        
+        // 去除行首行尾空白字符
+        line.erase(0, line.find_first_not_of(" \t\r\n"));
+        line.erase(line.find_last_not_of(" \t\r\n") + 1);
         
         // 忽略空行和注释行
         if (line.empty() || line[0] == '#') {

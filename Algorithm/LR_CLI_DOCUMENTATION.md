@@ -100,22 +100,22 @@ lr_cli <grammar_file> [options]
 #### 算法对比测试
 ```bash
 # 测试LR(0)
-./lr_cli ../TestGrammar/example_grammar.txt -t lr0 --table
+./lr_cli ../TestGrammar/*_grammar.txt -t lr0 --table
 
 # 测试SLR(1)
-./lr_cli ../TestGrammar/example_grammar.txt -t slr1 --table
+./lr_cli ../TestGrammar/*_grammar.txt -t slr1 --table
 
 # 测试LR(1)
-./lr_cli ../TestGrammar/example_grammar.txt -t lr1 --table
+./lr_cli ../TestGrammar/*_grammar.txt -t lr1 --table
 ```
 
 #### 组合功能使用
 ```bash
 # 同时显示分析表和项目集
-./lr_cli ../TestGrammar/example_grammar.txt -t slr1 --table --items
+./lr_cli ../TestGrammar/*_grammar.txt -t slr1 --table --items
 
 # 分析输入串并以JSON格式输出
-./lr_cli ../TestGrammar/example_grammar.txt -t slr1 -s "a + a * a" --json
+./lr_cli ../TestGrammar/*_grammar.txt -t slr1 -s "a + a * a" --json
 ```
 
 ## 输出格式详解
@@ -246,6 +246,81 @@ $ ./lr_cli grammar.txt -t slr1 -s "invalid_symbol"
 已定义的终结符：a, +, *, (, )
 
 建议：检查输入串中的符号是否都在文法中定义
+```
+
+## 错误文法测试
+
+### 错误文法类型
+
+lr_cli工具能够智能识别和报告多种类型的文法错误，帮助用户理解LR分析的局限性。
+
+#### 1. 左递归错误
+```bash
+# 测试包含左递归的文法
+./lr_cli ../TestGrammar/FaultGrammar/*.txt -t slr1 --table
+```
+**预期输出**: 报告左递归错误，所有LR分析器都会失败
+
+#### 2. 移进-归约冲突
+```bash
+# 测试悬空else问题
+./lr_cli ../TestGrammar/FaultGrammar/*conflict*.txt -t slr1 --table
+```
+**预期输出**: 报告移进/归约冲突，SLR(1)失败，LR(1)可能成功
+
+#### 3. 归约-归约冲突
+```bash
+# 测试二义性文法
+./lr_cli ../TestGrammar/FaultGrammar/*conflict*.txt -t slr1 --table
+```
+**预期输出**: 报告归约/归约冲突，所有LR分析器都会失败
+
+#### 4. 语法格式错误
+```bash
+# 测试格式错误的文法
+./lr_cli ../TestGrammar/FaultGrammar/*error*.txt -t slr1 --table
+```
+**预期输出**: 报告语法解析错误
+
+### 批量测试
+
+使用提供的批处理脚本可以系统性地测试所有文法：
+
+#### Linux/macOS
+```bash
+cd ../TestGrammar
+./test_all_grammars.sh
+```
+
+#### Windows
+```cmd
+cd ..\TestGrammar
+test_all_grammars.bat
+```
+
+### 错误诊断技巧
+
+#### 分析冲突详情
+```bash
+# 显示详细的冲突信息
+./lr_cli grammar.txt -t slr1 --table --items
+
+# 对比不同分析器的结果
+./lr_cli grammar.txt -t lr0 --table
+./lr_cli grammar.txt -t slr1 --table  
+./lr_cli grammar.txt -t lr1 --table
+```
+
+#### 渐进式测试
+```bash
+# 从最简单的算法开始
+./lr_cli grammar.txt -t lr0 --table 2>&1 | head -10
+
+# 如果LR(0)失败，尝试SLR(1)
+if ! ./lr_cli grammar.txt -t lr0 --table >/dev/null 2>&1; then
+    echo "LR(0) failed, trying SLR(1)..."
+    ./lr_cli grammar.txt -t slr1 --table
+fi
 ```
 
 ## 脚本集成
@@ -464,3 +539,83 @@ cat ../TestGrammar/example_grammar.txt
 ---
 
 *本文档涵盖了lr_cli命令行工具的完整使用方法，适用于自动化测试、批处理分析和编程集成等场景。*
+
+### 测试套件结构
+
+TestGrammar目录包含了完整的测试套件：
+
+```
+TestGrammar/
+├── *_grammar.txt              # 正确文法示例集合 ✓
+│   ├── example_grammar.txt     # 基本算术表达式
+│   ├── assignment_grammar.txt  # 赋值语句
+│   ├── conditional_grammar.txt # 条件语句
+│   └── ... (其他文法文件)
+├── FaultGrammar/              # 错误文法集合
+│   ├── *_recursive*.txt       # 递归相关错误 ✗
+│   ├── *_conflict*.txt        # 冲突相关错误 ✗  
+│   ├── *_error*.txt           # 语法格式错误 ✗
+│   ├── empty_*.txt            # 空文法错误 ✗
+│   └── ... (其他错误文法)
+├── test_all_grammars.sh       # Linux/macOS批处理脚本
+├── test_all_grammars.bat      # Windows批处理脚本
+└── README.md                  # 详细说明文档
+```
+
+### 自动化测试示例
+
+#### 基本错误检测测试
+```bash
+#!/bin/bash
+# 简单的错误检测脚本
+
+test_error_grammar() {
+    local file="$1"
+    local name="$2"
+    
+    echo -n "测试 $name: "
+    if ./lr_cli "$file" -t slr1 --table >/dev/null 2>&1; then
+        echo "✗ 意外成功"
+        return 1
+    else
+        echo "✓ 按预期失败"
+        return 0
+    fi
+}
+
+# 测试各种错误文法
+for file in FaultGrammar/*conflict*.txt; do
+    test_error_grammar "$file" "$(basename "$file" .txt)"
+done
+
+for file in FaultGrammar/*error*.txt; do
+    test_error_grammar "$file" "$(basename "$file" .txt)"
+done
+```
+
+#### 性能基准测试
+```bash
+# 测量分析表构造性能
+time_analysis() {
+    local grammar="$1"
+    local iterations=10
+    
+    echo "性能测试: $(basename "$grammar") ($iterations 次)"
+    start_time=$(date +%s.%N)
+    
+    for ((i=1; i<=iterations; i++)); do
+        ./lr_cli "$grammar" -t slr1 --table --json >/dev/null 2>&1
+    done
+    
+    end_time=$(date +%s.%N)
+    duration=$(echo "$end_time - $start_time" | bc)
+    avg_time=$(echo "scale=4; $duration / $iterations" | bc)
+    
+    echo "平均时间: ${avg_time}秒"
+}
+
+# 测试所有正确文法的性能
+for grammar in ../TestGrammar/*_grammar.txt; do
+    time_analysis "$grammar"
+done
+```

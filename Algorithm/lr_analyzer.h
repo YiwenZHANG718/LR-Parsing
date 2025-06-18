@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file lr_analyzer.h
  * @brief LR语法分析器头文件
  *

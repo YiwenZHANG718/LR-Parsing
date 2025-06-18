@@ -12,5 +12,4 @@ L -> * R
 L -> id
 R -> L
 R -> c c
-X -> c
 

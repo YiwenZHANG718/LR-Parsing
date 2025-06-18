@@ -10,6 +10,7 @@ TestGrammar目录包含了一套完整的LR语法分析器文法测试集合，�
 TestGrammar/
 ├── README.md                    # 本说明文档
 ├── test_all_grammars.sh         # Linux自动测试脚本
+├── test_all_grammars.bat        # Windows自动测试脚本
 ├── test_results.log             # 测试日志文件（运行后生成）
 ├── *_grammar.txt                # 正确文法文件集合
 ├── *_export.txt                 # 导出测试文件
@@ -33,10 +34,6 @@ TestGrammar/
 ```bash
 # Linux系统
 ./test_all_grammars.sh
-
-# Windows系统
-test_all_grammars.bat
-```
 
 ### 测试内容
 - 正确文法的分析表构造验证

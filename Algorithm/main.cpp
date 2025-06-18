@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file main.cpp
  * @brief LR语法分析器交互式主程序
  *
