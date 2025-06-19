@@ -1,65 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-LR语法分析器图形化界面 - 中文版
-支持LR(0)、SLR(1)、LR(1)语法分析的完整功能
-
-本GUI应用程序提供了一个完整的图形化界面，用于：
-1. 输入和管理上下文无关文法
-2. 构造LR分析表（支持LR(0)、SLR(1)、LR(1)三种类型）
-3. 分析输入串并显示详细的分析过程
-4. 可视化项目集、ACTION表、GOTO表
-5. 导出完整的分析报告
-
-=== 软件架构 ===
-
-1. 界面结构：
-   ┌─────────────────────────────────────────
-   │ 标题栏 (Header)                          
-   ├─────────────┬───────────────────────────
-   │ 控制面板     │ 结果显示区域               
-   │ - 文法输入   │ - 分析结果 (总览)          
-   │ - 输入串     │ - ACTION表                
-   │ - 分析器选择 │ - GOTO表                  
-   │ - 操作按钮   │ - 项目集                  
-   │             │ - 分析过程                
-   └─────────────┴───────────────────────────
-   │ 状态栏 (Status Bar + Progress)          
-   └─────────────────────────────────────────
-
-2. 数据流：
-   文法输入 → C++后端处理 → JSON结果 → GUI显示 → 用户交互
-
-3. 线程模型：
-   - 主线程：GUI事件处理和界面更新
-   - 工作线程：C++后端调用，避免界面冻结
-   - 线程安全：通过root.after()在主线程更新GUI
-
-4. 跨平台支持：
-   - Windows: 查找lr_cli.exe
-   - Linux/macOS: 查找lr_cli
-   - 字体适配：自动检测中文字体
-   - 文件路径：使用os.path.join()确保兼容性
-
-技术特点：
-- 跨平台兼容（Windows/Linux/macOS）
-- 多线程处理，避免界面冻结
-- 中文字体自动检测和适配
-- 完整的错误处理和用户反馈
-- 可滚动的界面布局，适应不同屏幕尺寸
-- 丰富的键盘快捷键支持
-- JSON和文本双格式导出
-
-作者：ZJJ
-版本：v2.0
-日期：2025.6.10
-
-"""
-
 # 标准库导入
-import tkinter as tk                    # GUI基础框架
+import tkinter as tk                   # GUI基础框架
 from tkinter import ttk, scrolledtext, messagebox, filedialog, font  # GUI组件
-import subprocess                       # 子进程调用（调用C++后端）
+import subprocess                      # 子进程调用（调用C++后端）
 import os                              # 操作系统相关功能
 import sys                             # 系统相关功能
 import threading                       # 多线程处理
@@ -69,47 +13,10 @@ import tempfile                        # 临时文件处理
 from datetime import datetime          # 日期时间处理
 
 class CompleteLRGUI:
-    """
-    完整的LR语法分析器图形用户界面类
-    
-    这个类实现了一个功能完整的LR语法分析器GUI，包括：
-    
-    主要功能：
-    1. 文法输入和管理（支持文件加载/保存）
-    2. 三种LR分析器类型选择（LR(0)/SLR(1)/LR(1)）
-    3. 分析表构造和可视化
-    4. 输入串语法分析
-    5. 项目集显示
-    6. 完整报告导出
-    
-    界面特点：
-    - 左右分栏布局：左侧控制面板，右侧结果显示
-    - 多标签页结果展示：分析结果、ACTION表、GOTO表、项目集、分析过程
-    - 可滚动的控制面板，适应不同屏幕尺寸
-    - 响应式设计，支持窗口缩放
-    
-    技术实现：
-    - 多线程处理C++后端调用，避免界面冻结
-    - 跨平台可执行文件检测
-    - 中文字体自动适配
-    - 完整的错误处理和用户反馈
-    """
     
     def __init__(self, root):
-        """
-        初始化GUI界面
-        
-        Args:
-            root (tk.Tk): Tkinter根窗口对象
-            
-        初始化步骤：
-        1. 设置窗口基本属性（标题、大小、背景色）
-        2. 配置界面样式和字体
-        3. 初始化变量（文法文件路径、分析器类型等）
-        4. 创建主要界面组件
-        5. 绑定事件处理器
-        6. 加载默认示例文法
-        """
+       
+        #初始化GUI界面 设置窗口基本属性 配置界面样式
         self.root = root
         self.root.title("LR Parser Analyzer") 
         self.root.geometry("1200x800")          # 设置窗口大小为1200x800像素
@@ -132,30 +39,13 @@ class CompleteLRGUI:
         # 运行状态标志
         self.analysis_running = False            # 标识是否正在执行分析操作
         
-    def get_cpp_executable(self):
-        """
-        获取C++可执行文件路径 - 跨平台兼容
-        
-        该方法实现了跨平台的C++后端可执行文件检测：
-        1. 根据操作系统类型确定可能的文件名
-        2. 按优先级顺序查找可执行文件
-        3. 返回第一个找到的可执行文件路径
-        
-        平台支持：
-        - Windows: 优先查找 lr_cli.exe，备选 lr_cli
-        - Linux/macOS: 优先查找 lr_cli，备选 lr_cli.exe
-        
-        Returns:
-            str or None: 找到的可执行文件的完整路径，如果未找到则返回None
-            
-        查找位置：
-            相对于GUI目录的 ../Algorithm/ 目录
-        """
+    def get_cpp_executable(self):#获取C++可执行文件路径 1. 根据操作系统类型确定可能的文件名 2. 按优先级顺序查找可执行文件 3. 返回第一个找到的可执行文件路径
+    
         # 根据操作系统确定可执行文件名列表（按优先级排序）
         executable_names = []
-        if os.name == 'nt':  # Windows系统
+        if os.name == 'nt':  # Windows系统 优先查找 lr_cli.exe，备选 lr_cli
             executable_names = ["lr_cli.exe", "lr_cli"]
-        else:  # Unix-like系统 (Linux, macOS)
+        else:  # Unix-like系统 (Linux, macOS)优先查找 lr_cli，备选 lr_cli.exe
             executable_names = ["lr_cli", "lr_cli.exe"]
         
         # 按优先级顺序查找可执行文件
@@ -166,23 +56,13 @@ class CompleteLRGUI:
         
         return None  # 未找到任何可执行文件
     
-    def setup_styles(self):
-        """
-        设置界面样式和主题
+    def setup_styles(self):#设置界面样式和主题 
+     #Title.TLabel: 主标题样式（大字体，粗体，深色）
+     #Header.TLabel: 小标题样式（中等字体，粗体）
+     #Action.TButton: 操作按钮样式（粗体，内边距）
+     #Success.TLabel: 成功消息样式（绿色）
+     #Error.TLabel: 错误消息样式（红色）
         
-        该方法负责配置整个应用程序的视觉样式：
-        1. 设置主题风格
-        2. 检测和配置中文字体
-        3. 定义自定义样式（标题、按钮、标签等）
-        4. 设置颜色方案
-        
-        样式类型：
-        - Title.TLabel: 主标题样式（大字体，粗体，深色）
-        - Header.TLabel: 小标题样式（中等字体，粗体）
-        - Action.TButton: 操作按钮样式（粗体，内边距）
-        - Success.TLabel: 成功消息样式（绿色）
-        - Error.TLabel: 错误消息样式（红色）
-        """
         style = ttk.Style()
         style.theme_use('clam')  # 使用现代化的clam主题
         
@@ -223,25 +103,11 @@ class CompleteLRGUI:
     def get_chinese_font(self):
         """
         获取系统中可用的中文字体
-        
         该方法自动检测系统中可用的中文字体，确保界面能够正确显示中文：
         1. 定义中文字体优先级列表
         2. 获取系统可用字体列表
         3. 按优先级测试每个字体的中文显示能力
         4. 返回第一个可用的中文字体
-        
-        字体优先级（从高到低）：
-        1. Noto Sans CJK SC - Google开源中文字体，显示效果最佳
-        2. WenQuanYi Zen Hei - 文泉驿正黑体（Linux常用）
-        3. WenQuanYi Micro Hei - 文泉驿微米黑（Linux轻量版）
-        4. SimHei - 黑体（Windows系统字体）
-        5. Microsoft YaHei - 微软雅黑（Windows现代字体）
-        6. Liberation Sans - 开源字体（跨平台）
-        7. DejaVu Sans - 开源字体（备选）
-        8. Sans - 系统默认无衬线字体
-        
-        Returns:
-            str: 可用的中文字体名称，如果都不可用则返回'TkDefaultFont'
         """
         # 定义中文字体优先级列表
         chinese_fonts = [
@@ -285,22 +151,12 @@ class CompleteLRGUI:
     
     def _test_chinese_font(self, font_obj):
         """
-        测试指定字体是否支持中文显示
-        
         该方法通过创建临时标签组件来测试字体是否能正确渲染中文字符：
         1. 创建临时标签并设置测试字体
         2. 尝试渲染中文字符"测试"
         3. 如果渲染成功且无异常，则认为字体可用
         4. 清理临时组件
         
-        Args:
-            font_obj (tk.font.Font): 要测试的字体对象
-            
-        Returns:
-            bool: True表示字体支持中文显示，False表示不支持
-            
-        注意：
-            该方法会创建临时UI组件，可能会有轻微的性能开销
         """
         try:
             # 创建临时测试标签组件
@@ -312,27 +168,8 @@ class CompleteLRGUI:
         except:
             return False                    # 如果有任何异常，说明字体不可用
         
-    def create_widgets(self):
-        """
-        创建主要界面组件
+    def create_widgets(self):   #创建主要界面组件
         
-        该方法负责构建整个GUI的界面结构：
-        1. 创建顶部标题区域（应用名称和版本信息）
-        2. 创建主要内容区域（左右分栏布局）
-        3. 创建底部状态栏（显示操作状态和进度）
-        4. 加载默认示例文法
-        
-        界面布局结构：
-        ┌─────────────────────────────────────┐
-        │ 标题区域 (Header)                    │
-        ├─────────────┬───────────────────────┤
-        │ 控制面板     │ 结果显示区域           │
-        │ (Control)   │ (Results Notebook)    │
-        │            │                       │
-        └─────────────┴───────────────────────┤
-        │ 状态栏 (Status Bar)                 │
-        └─────────────────────────────────────┘
-        """
         # 创建顶部标题区域
         self.create_header()
         
@@ -345,19 +182,8 @@ class CompleteLRGUI:
         # 加载默认示例文法（所有组件创建完成后）
         self.load_example_grammar()
         
-    def create_header(self):
-        """
-        创建顶部标题区域
+    def create_header(self):   #创建顶部标题区域
         
-        该方法创建应用程序的顶部标题栏，包含：
-        1. 左侧：应用程序名称（大字体、粗体）
-        2. 右侧：版本信息和功能说明
-        
-        布局：
-        ┌──────────────────────────────────────────────┐
-        │ LR语法分析器               vx.x - 支持 LR... │
-        └──────────────────────────────────────────────┘
-        """
         # 创建标题容器框架，减少内边距
         header_frame = ttk.Frame(self.root)
         header_frame.pack(fill='x', padx=10, pady=5)
@@ -376,21 +202,8 @@ class CompleteLRGUI:
                                  foreground='#7f8c8d')
         version_label.pack(side='right')
         
-    def create_main_area(self):
-        """
-        创建主要内容区域
+    def create_main_area(self):#创建主要内容区域   1. 左侧：控制面板（文法输入、参数设置、操作按钮） 2. 右侧：结果显示面板（多标签页展示不同类型的结果）
         
-        该方法创建应用程序的主要工作区域，采用左右分栏布局：
-        1. 左侧：控制面板（文法输入、参数设置、操作按钮）
-        2. 右侧：结果显示面板（多标签页展示不同类型的结果）
-        
-        分栏比例：
-        - 左侧控制面板：权重1（较窄）
-        - 右侧结果面板：权重3（较宽）
-        
-        这种布局让用户可以在左侧进行操作，在右侧查看结果，
-        符合从左到右的操作流程习惯。
-        """
         # 创建水平分割的主面板容器，减少间距
         main_paned = ttk.PanedWindow(self.root, orient='horizontal')
         main_paned.pack(fill='both', expand=True, padx=5, pady=5)
@@ -409,23 +222,14 @@ class CompleteLRGUI:
         # 创建右侧结果面板的内容
         self.create_result_panel(right_frame)
         
-    def create_control_panel(self, parent):
+    def create_control_panel(self, parent):# 创建左侧控制面板
         """
-        创建左侧控制面板
-        
         该方法创建一个可滚动的控制面板，包含所有用户操作控件：
         1. 文法输入区域：文本编辑器和文件操作按钮
         2. 输入串区域：待分析字符串的输入框
         3. 分析器类型选择：LR(0)/SLR(1)/LR(1)单选按钮
         4. 操作按钮区域：主要功能按钮和辅助功能按钮
         
-        可滚动设计原因：
-        - 适应不同屏幕尺寸和分辨率
-        - 确保所有控件在小屏幕上也能访问
-        - 支持鼠标滚轮操作，提升用户体验
-        
-        Args:
-            parent: 父容器组件
         """
         # 创建可滚动框架的组件结构
         # Canvas + Scrollbar + Frame 的组合实现可滚动区域
@@ -487,32 +291,8 @@ class CompleteLRGUI:
         # 延迟绑定，确保所有组件都已创建
         self.root.after(100, lambda: bind_all_children(scrollable_frame))
         
-    def create_grammar_section(self, parent):
-        """
-        创建文法输入区域
-        
-        该方法创建文法规则编辑区域，是用户主要的输入界面：
-        
-        组件结构：
-        1. 顶部按钮栏：文件操作按钮（加载、保存、示例）
-        2. 说明标签：提示用户输入格式
-        3. 多行文本编辑器：支持滚动的文法输入框
-        
-        文本编辑器特性：
-        - 固定高度：10行，确保界面紧凑
-        - 固定宽度：45字符，适合文法规则
-        - 中文字体：使用检测到的中文字体
-        - 无自动换行：保持文法格式清晰
-        - 高亮选择：蓝色背景突出显示选中文本
-        
-        按钮功能：
-        - 加载文件：从外部文件导入文法
-        - 保存文件：将当前文法保存到文件
-        - 示例文法：加载预设的示例文法
-        
-        Args:
-            parent: 父容器组件
-        """
+    def create_grammar_section(self, parent): #创建文法输入区域
+       
         # 创建文法输入区域的容器
         grammar_frame = ttk.LabelFrame(parent, text="文法输入", padding=15)
         grammar_frame.pack(fill='x', padx=5, pady=5)
@@ -616,32 +396,7 @@ class CompleteLRGUI:
                   command=self.export_report).pack(fill='x', pady=2)
         
     def create_result_panel(self, parent):
-        """
-        创建右侧结果显示面板
-        
-        该方法创建多标签页的结果显示区域，是分析结果的主要展示界面：
-        
-        标签页结构：
-        1. 分析结果：总体摘要和状态信息
-        2. ACTION表：LR分析器的动作表
-        3. GOTO表：LR分析器的跳转表  
-        4. 项目集：LR(0)/SLR(1)/LR(1)的项目集族
-        5. 分析过程：输入串的详细分析步骤
-        
-        设计优势：
-        - 标签页分离：不同类型的结果独立显示，避免混乱
-        - 统一样式：所有标签页使用相同的布局和字体
-        - 工具栏：每个标签页都有复制按钮等操作
-        - 可扩展：易于添加新的结果类型标签页
-        
-        用户体验：
-        - 直观导航：标签页名称清晰表达内容
-        - 快速切换：点击标签页即可查看不同结果
-        - 复制功能：每个标签页都支持内容复制
-        
-        Args:
-            parent: 父容器组件
-        """
+
         # 创建多标签页容器
         self.notebook = ttk.Notebook(parent)
         self.notebook.pack(fill='both', expand=True, padx=5, pady=5)
@@ -788,8 +543,6 @@ class CompleteLRGUI:
         """
         绑定键盘快捷键和事件处理器
         
-        该方法为GUI应用程序配置各种事件绑定，提升用户体验：
-        
         键盘快捷键：
         - Ctrl+O: 打开文法文件
         - Ctrl+S: 保存文法文件  
@@ -797,14 +550,7 @@ class CompleteLRGUI:
         - F6: 分析输入串
         - F7: 显示项目集
         - Enter: 在输入框中按回车键执行分析
-        
-        界面事件：
-        - 标签页切换事件：更新状态栏显示
-        
-        设计目的：
-        - 提供快速访问常用功能的方式
-        - 符合用户的操作习惯（如Ctrl+O打开文件）
-        - 提升操作效率，减少鼠标点击
+
         """
         # 文件操作快捷键
         self.root.bind('<Control-o>', lambda e: self.load_grammar_file())  # Ctrl+O: 打开
@@ -821,30 +567,560 @@ class CompleteLRGUI:
         # 标签页切换事件：更新状态栏显示当前标签页
         self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
         
-    def load_grammar_file(self):
+    def create_grammar_section(self, parent): #创建文法输入区域
+       
+        # 创建文法输入区域的容器
+        grammar_frame = ttk.LabelFrame(parent, text="文法输入", padding=15)
+        grammar_frame.pack(fill='x', padx=5, pady=5)
+        
+        # 创建顶部按钮栏
+        btn_frame = ttk.Frame(grammar_frame)
+        btn_frame.pack(fill='x', pady=(0, 10))
+        
+        # 文件操作按钮
+        ttk.Button(btn_frame, text="加载文件", 
+                  command=self.load_grammar_file,
+                  style='Action.TButton').pack(side='left', padx=(0, 5))
+        
+        ttk.Button(btn_frame, text="保存文件", 
+                  command=self.save_grammar_file,
+                  style='Action.TButton').pack(side='left', padx=5)
+        
+        ttk.Button(btn_frame, text="示例文法", 
+                  command=self.load_example_grammar,
+                  style='Action.TButton').pack(side='left', padx=5)
+        
+        # 输入说明标签
+        ttk.Label(grammar_frame, text="文法规则（每行一个产生式）:", 
+                 style='Header.TLabel').pack(anchor='w', pady=(0, 5))
+        
+        # 文法输入文本框
+        self.grammar_text = scrolledtext.ScrolledText(
+            grammar_frame, 
+            height=10,                      # 显示10行文本
+            width=45,                       # 显示45个字符宽度
+            font=(self.chinese_font, 11),   # 使用中文字体，11号大小
+            wrap='none',                    # 不自动换行，保持格式
+            bg='white',                     # 白色背景
+            selectbackground='#3498db',     # 蓝色选择背景
+            selectforeground='white')       # 白色选择前景
+        self.grammar_text.pack(fill='x', pady=5)
+        
+    def create_input_section(self, parent):
+        """创建输入串区域"""
+        input_frame = ttk.LabelFrame(parent, text="输入串", padding=10)
+        input_frame.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(input_frame, text="待分析的输入串:", 
+                 style='Header.TLabel').pack(anchor='w')
+        
+        self.input_entry = ttk.Entry(input_frame, font=(self.chinese_font, 11))
+        self.input_entry.pack(fill='x', pady=3)
+        self.input_entry.insert(0, "a + a * a")  # Default input
+        
+        # Input tip
+        tip_label = ttk.Label(input_frame, 
+                             text="提示: 用空格分隔符号",
+                             font=('Arial', 9),
+                             foreground='#7f8c8d')
+        tip_label.pack(anchor='w', pady=(3, 0))
+        
+    def create_analyzer_section(self, parent):
+        """创建分析器类型选择区域"""
+        type_frame = ttk.LabelFrame(parent, text="分析器类型", padding=15)
+        type_frame.pack(fill='x', padx=5, pady=5)
+        
+        # Radio buttons
+        ttk.Radiobutton(type_frame, text="LR(0) - 基础LR分析", 
+                       variable=self.analyzer_type, 
+                       value="LR0").pack(anchor='w', pady=2)
+        
+        ttk.Radiobutton(type_frame, text="SLR(1) - 简单LR分析", 
+                       variable=self.analyzer_type, 
+                       value="SLR1").pack(anchor='w', pady=2)
+        
+        ttk.Radiobutton(type_frame, text="LR(1) - 规范LR分析", 
+                       variable=self.analyzer_type, 
+                       value="LR1").pack(anchor='w', pady=2)
+        
+    def create_operation_section(self, parent):
+        """创建操作按钮区域"""
+        action_frame = ttk.LabelFrame(parent, text="操作", padding=10)
+        action_frame.pack(fill='x', padx=5, pady=5)
+        
+        # Main operation buttons
+        ttk.Button(action_frame, text="构造分析表", 
+                  command=self.construct_table,
+                  style='Action.TButton').pack(fill='x', pady=2)
+        
+        ttk.Button(action_frame, text="分析输入串", 
+                  command=self.analyze_input,
+                  style='Action.TButton').pack(fill='x', pady=2)
+        
+        ttk.Button(action_frame, text="显示项目集", 
+                  command=self.show_item_sets,
+                  style='Action.TButton').pack(fill='x', pady=2)
+        
+        # Separator line
+        ttk.Separator(action_frame, orient='horizontal').pack(fill='x', pady=5)
+        
+        # Auxiliary operation buttons
+        ttk.Button(action_frame, text="清空结果", 
+                  command=self.clear_results).pack(fill='x', pady=2)
+        
+        ttk.Button(action_frame, text="导出报告", 
+                  command=self.export_report).pack(fill='x', pady=2)
+        
+    def create_result_panel(self, parent):
+
+        # 创建多标签页容器
+        self.notebook = ttk.Notebook(parent)
+        self.notebook.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        # 创建各个功能标签页
+        self.create_analysis_tab()     # 分析结果总览标签页
+        self.create_action_tab()       # ACTION表标签页
+        self.create_goto_tab()         # GOTO表标签页
+        self.create_itemsets_tab()     # 项目集标签页
+        self.create_process_tab()      # 分析过程标签页
+        
+    def create_analysis_tab(self):
+        """创建分析结果标签页"""
+        self.analysis_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.analysis_frame, text="分析结果")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.analysis_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="分析结果:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.analysis_text)).pack(side='right', padx=5)
+        
+        # Result text box with horizontal scrollbar
+        self.analysis_text = scrolledtext.ScrolledText(
+            self.analysis_frame, 
+            font=(self.chinese_font, 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.analysis_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_action_tab(self):
+        """创建ACTION表标签页"""
+        self.action_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.action_frame, text="ACTION表")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.action_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="ACTION表:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.action_text)).pack(side='right', padx=5)
+        
+        # ACTION table display area with horizontal scrollbar
+        self.action_text = scrolledtext.ScrolledText(
+            self.action_frame, 
+            font=('Consolas', 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.action_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_goto_tab(self):
+        """创建GOTO表标签页"""
+        self.goto_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.goto_frame, text="GOTO表")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.goto_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="GOTO表:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.goto_text)).pack(side='right', padx=5)
+        
+        # GOTO table display area with horizontal scrollbar
+        self.goto_text = scrolledtext.ScrolledText(
+            self.goto_frame, 
+            font=('Consolas', 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.goto_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_itemsets_tab(self):
+        """创建项目集标签页"""
+        self.itemsets_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.itemsets_frame, text="项目集")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.itemsets_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="项目集:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.itemsets_text)).pack(side='right', padx=5)
+        
+        # Item sets display area with horizontal scrollbar
+        self.itemsets_text = scrolledtext.ScrolledText(
+            self.itemsets_frame, 
+            font=('Consolas', 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.itemsets_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_process_tab(self):
+        """创建分析过程标签页"""
+        self.process_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.process_frame, text="分析过程")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.process_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="详细分析过程:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.process_text)).pack(side='right', padx=5)
+        
+        # Analysis process display area with horizontal scrollbar
+        self.process_text = scrolledtext.ScrolledText(
+            self.process_frame, 
+            font=(self.chinese_font, 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.process_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_status_bar(self):
+        """创建状态栏"""
+        status_frame = ttk.Frame(self.root)
+        status_frame.pack(fill='x', side='bottom')
+        
+        self.status_bar = ttk.Label(status_frame, text="就绪", relief='sunken')
+        self.status_bar.pack(fill='x', padx=10, pady=3)
+        
+        # Progress bar (hidden state)
+        self.progress_bar = ttk.Progressbar(status_frame, mode='indeterminate')
+        
+    def bind_events(self):
         """
-        加载文法文件
+        绑定键盘快捷键和事件处理器
         
-        该方法提供文件选择对话框，让用户加载外部文法文件：
-        1. 显示文件选择对话框，支持.txt文件过滤
-        2. 读取选中文件的内容（使用UTF-8编码）
-        3. 将内容显示在文法编辑区
-        4. 更新状态栏显示操作结果
-        
-        支持的文件格式：
-        - .txt文件（主要）
-        - 所有文件类型（备选）
-        
-        错误处理：
-        - 文件不存在或无法读取
-        - 编码问题
-        - 权限问题
-        
-        用户体验：
-        - 默认在当前目录打开
-        - 显示友好的文件类型过滤
-        - 提供操作反馈（状态栏更新）
+        键盘快捷键：
+        - Ctrl+O: 打开文法文件
+        - Ctrl+S: 保存文法文件  
+        - F5: 构造分析表
+        - F6: 分析输入串
+        - F7: 显示项目集
+        - Enter: 在输入框中按回车键执行分析
+
         """
+        # 文件操作快捷键
+        self.root.bind('<Control-o>', lambda e: self.load_grammar_file())  # Ctrl+O: 打开
+        self.root.bind('<Control-s>', lambda e: self.save_grammar_file())  # Ctrl+S: 保存
+        
+        # 分析功能快捷键
+        self.root.bind('<F5>', lambda e: self.construct_table())    # F5: 构造分析表
+        self.root.bind('<F6>', lambda e: self.analyze_input())     # F6: 分析输入串
+        self.root.bind('<F7>', lambda e: self.show_item_sets())    # F7: 显示项目集
+        
+        # 输入框回车键绑定：按回车执行输入串分析
+        self.input_entry.bind('<Return>', lambda e: self.analyze_input())
+        
+        # 标签页切换事件：更新状态栏显示当前标签页
+        self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
+        
+    def create_grammar_section(self, parent): #创建文法输入区域
+       
+        # 创建文法输入区域的容器
+        grammar_frame = ttk.LabelFrame(parent, text="文法输入", padding=15)
+        grammar_frame.pack(fill='x', padx=5, pady=5)
+        
+        # 创建顶部按钮栏
+        btn_frame = ttk.Frame(grammar_frame)
+        btn_frame.pack(fill='x', pady=(0, 10))
+        
+        # 文件操作按钮
+        ttk.Button(btn_frame, text="加载文件", 
+                  command=self.load_grammar_file,
+                  style='Action.TButton').pack(side='left', padx=(0, 5))
+        
+        ttk.Button(btn_frame, text="保存文件", 
+                  command=self.save_grammar_file,
+                  style='Action.TButton').pack(side='left', padx=5)
+        
+        ttk.Button(btn_frame, text="示例文法", 
+                  command=self.load_example_grammar,
+                  style='Action.TButton').pack(side='left', padx=5)
+        
+        # 输入说明标签
+        ttk.Label(grammar_frame, text="文法规则（每行一个产生式）:", 
+                 style='Header.TLabel').pack(anchor='w', pady=(0, 5))
+        
+        # 文法输入文本框
+        self.grammar_text = scrolledtext.ScrolledText(
+            grammar_frame, 
+            height=10,                      # 显示10行文本
+            width=45,                       # 显示45个字符宽度
+            font=(self.chinese_font, 11),   # 使用中文字体，11号大小
+            wrap='none',                    # 不自动换行，保持格式
+            bg='white',                     # 白色背景
+            selectbackground='#3498db',     # 蓝色选择背景
+            selectforeground='white')       # 白色选择前景
+        self.grammar_text.pack(fill='x', pady=5)
+        
+    def create_input_section(self, parent):
+        """创建输入串区域"""
+        input_frame = ttk.LabelFrame(parent, text="输入串", padding=10)
+        input_frame.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(input_frame, text="待分析的输入串:", 
+                 style='Header.TLabel').pack(anchor='w')
+        
+        self.input_entry = ttk.Entry(input_frame, font=(self.chinese_font, 11))
+        self.input_entry.pack(fill='x', pady=3)
+        self.input_entry.insert(0, "a + a * a")  # Default input
+        
+        # Input tip
+        tip_label = ttk.Label(input_frame, 
+                             text="提示: 用空格分隔符号",
+                             font=('Arial', 9),
+                             foreground='#7f8c8d')
+        tip_label.pack(anchor='w', pady=(3, 0))
+        
+    def create_analyzer_section(self, parent):
+        """创建分析器类型选择区域"""
+        type_frame = ttk.LabelFrame(parent, text="分析器类型", padding=15)
+        type_frame.pack(fill='x', padx=5, pady=5)
+        
+        # Radio buttons
+        ttk.Radiobutton(type_frame, text="LR(0) - 基础LR分析", 
+                       variable=self.analyzer_type, 
+                       value="LR0").pack(anchor='w', pady=2)
+        
+        ttk.Radiobutton(type_frame, text="SLR(1) - 简单LR分析", 
+                       variable=self.analyzer_type, 
+                       value="SLR1").pack(anchor='w', pady=2)
+        
+        ttk.Radiobutton(type_frame, text="LR(1) - 规范LR分析", 
+                       variable=self.analyzer_type, 
+                       value="LR1").pack(anchor='w', pady=2)
+        
+    def create_operation_section(self, parent):
+        """创建操作按钮区域"""
+        action_frame = ttk.LabelFrame(parent, text="操作", padding=10)
+        action_frame.pack(fill='x', padx=5, pady=5)
+        
+        # Main operation buttons
+        ttk.Button(action_frame, text="构造分析表", 
+                  command=self.construct_table,
+                  style='Action.TButton').pack(fill='x', pady=2)
+        
+        ttk.Button(action_frame, text="分析输入串", 
+                  command=self.analyze_input,
+                  style='Action.TButton').pack(fill='x', pady=2)
+        
+        ttk.Button(action_frame, text="显示项目集", 
+                  command=self.show_item_sets,
+                  style='Action.TButton').pack(fill='x', pady=2)
+        
+        # Separator line
+        ttk.Separator(action_frame, orient='horizontal').pack(fill='x', pady=5)
+        
+        # Auxiliary operation buttons
+        ttk.Button(action_frame, text="清空结果", 
+                  command=self.clear_results).pack(fill='x', pady=2)
+        
+        ttk.Button(action_frame, text="导出报告", 
+                  command=self.export_report).pack(fill='x', pady=2)
+        
+    def create_result_panel(self, parent):
+
+        # 创建多标签页容器
+        self.notebook = ttk.Notebook(parent)
+        self.notebook.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        # 创建各个功能标签页
+        self.create_analysis_tab()     # 分析结果总览标签页
+        self.create_action_tab()       # ACTION表标签页
+        self.create_goto_tab()         # GOTO表标签页
+        self.create_itemsets_tab()     # 项目集标签页
+        self.create_process_tab()      # 分析过程标签页
+        
+    def create_analysis_tab(self):
+        """创建分析结果标签页"""
+        self.analysis_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.analysis_frame, text="分析结果")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.analysis_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="分析结果:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.analysis_text)).pack(side='right', padx=5)
+        
+        # Result text box with horizontal scrollbar
+        self.analysis_text = scrolledtext.ScrolledText(
+            self.analysis_frame, 
+            font=(self.chinese_font, 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.analysis_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_action_tab(self):
+        """创建ACTION表标签页"""
+        self.action_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.action_frame, text="ACTION表")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.action_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="ACTION表:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.action_text)).pack(side='right', padx=5)
+        
+        # ACTION table display area with horizontal scrollbar
+        self.action_text = scrolledtext.ScrolledText(
+            self.action_frame, 
+            font=('Consolas', 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.action_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_goto_tab(self):
+        """创建GOTO表标签页"""
+        self.goto_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.goto_frame, text="GOTO表")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.goto_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="GOTO表:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.goto_text)).pack(side='right', padx=5)
+        
+        # GOTO table display area with horizontal scrollbar
+        self.goto_text = scrolledtext.ScrolledText(
+            self.goto_frame, 
+            font=('Consolas', 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.goto_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_itemsets_tab(self):
+        """创建项目集标签页"""
+        self.itemsets_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.itemsets_frame, text="项目集")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.itemsets_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="项目集:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.itemsets_text)).pack(side='right', padx=5)
+        
+        # Item sets display area with horizontal scrollbar
+        self.itemsets_text = scrolledtext.ScrolledText(
+            self.itemsets_frame, 
+            font=('Consolas', 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.itemsets_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_process_tab(self):
+        """创建分析过程标签页"""
+        self.process_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.process_frame, text="分析过程")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.process_frame)
+        toolbar.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Label(toolbar, text="详细分析过程:", style='Header.TLabel').pack(side='left')
+        
+        ttk.Button(toolbar, text="复制", 
+                  command=lambda: self.copy_text(self.process_text)).pack(side='right', padx=5)
+        
+        # Analysis process display area with horizontal scrollbar
+        self.process_text = scrolledtext.ScrolledText(
+            self.process_frame, 
+            font=(self.chinese_font, 10),
+            wrap='none',  # 禁用自动换行，启用水平滚动
+            bg='#fefefe',
+            selectbackground='#3498db',
+            selectforeground='white')
+        self.process_text.pack(fill='both', expand=True, padx=5, pady=5)
+        
+    def create_status_bar(self):
+        """创建状态栏"""
+        status_frame = ttk.Frame(self.root)
+        status_frame.pack(fill='x', side='bottom')
+        
+        self.status_bar = ttk.Label(status_frame, text="就绪", relief='sunken')
+        self.status_bar.pack(fill='x', padx=10, pady=3)
+        
+        # Progress bar (hidden state)
+        self.progress_bar = ttk.Progressbar(status_frame, mode='indeterminate')
+        
+    def bind_events(self):
+        """
+        绑定键盘快捷键和事件处理器
+        
+        键盘快捷键：
+        - Ctrl+O: 打开文法文件
+        - Ctrl+S: 保存文法文件  
+        - F5: 构造分析表
+        - F6: 分析输入串
+        - F7: 显示项目集
+        - Enter: 在输入框中按回车键执行分析
+
+        """
+        # 文件操作快捷键
+        self.root.bind('<Control-o>', lambda e: self.load_grammar_file())  # Ctrl+O: 打开
+        self.root.bind('<Control-s>', lambda e: self.save_grammar_file())  # Ctrl+S: 保存
+        
+        # 分析功能快捷键
+        self.root.bind('<F5>', lambda e: self.construct_table())    # F5: 构造分析表
+        self.root.bind('<F6>', lambda e: self.analyze_input())     # F6: 分析输入串
+        self.root.bind('<F7>', lambda e: self.show_item_sets())    # F7: 显示项目集
+        
+        # 输入框回车键绑定：按回车执行输入串分析
+        self.input_entry.bind('<Return>', lambda e: self.analyze_input())
+        
+        # 标签页切换事件：更新状态栏显示当前标签页
+        self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
+        
+    def load_grammar_file(self):#加载文法文件 将内容显示在文法编辑区
+        
         # 显示文件选择对话框
         file_path = filedialog.askopenfilename(
             title="选择文法文件",
@@ -915,23 +1191,8 @@ class CompleteLRGUI:
         self.grammar_text.insert(1.0, example_grammar)
         self.update_status("已加载示例文法")
         
-    def construct_table(self):
-        """
-        构造LR分析表
+    def construct_table(self): #构造LR分析表
         
-        该方法是分析表构造的主入口函数：
-        1. 验证文法输入的有效性
-        2. 更新界面状态（显示进度条，更新状态栏）
-        3. 启动后台线程执行实际的构造工作
-        
-        设计特点：
-        - 异步处理：避免阻塞GUI主线程
-        - 用户反馈：显示进度指示和状态信息
-        - 错误处理：验证输入有效性
-        
-        工作流程：
-        输入验证 → 显示进度 → 后台线程处理 → 更新结果
-        """
         # 首先验证文法输入是否有效
         if not self.validate_grammar():
             return
@@ -955,13 +1216,6 @@ class CompleteLRGUI:
         4. 解析返回的JSON结果
         5. 通过主线程更新GUI显示
         
-        线程安全设计：
-        - 所有GUI更新操作都通过root.after()在主线程中执行
-        - 使用try-except确保异常不会导致线程崩溃
-        - 无论成功失败都会隐藏进度条
-        
-        C++后端调用：
-        命令格式：lr_cli <文法文件> -t <分析器类型> --table --json
         """
         try:
             # 第一步：将当前文法内容保存到临时文件
@@ -999,21 +1253,12 @@ class CompleteLRGUI:
     def _update_table_results(self, result):
         """
         更新分析表构造结果
-        
         该方法处理C++后端返回的分析表构造结果：
         1. 检查命令执行状态
         2. 解析JSON格式的返回数据
         3. 更新各个标签页的显示内容
         4. 处理错误情况并提供用户友好的错误信息
         
-        成功流程：
-        解析JSON → 更新ACTION表 → 更新GOTO表 → 更新项目集 → 显示摘要 → 切换到结果标签页
-        
-        失败流程：
-        格式化错误信息 → 显示错误对话框 → 在分析结果标签页显示详细错误
-        
-        Args:
-            result: subprocess.run()返回的结果对象，包含returncode、stdout、stderr
         """
         self.analysis_running = False
         
@@ -1401,7 +1646,6 @@ class CompleteLRGUI:
     def export_report(self):
         """
         导出完整分析报告
-        
         该方法允许用户将所有分析结果导出为文件，支持两种格式：
         1. JSON格式：结构化数据，便于程序处理
         2. 文本格式：人类可读的完整报告
@@ -1440,7 +1684,7 @@ class CompleteLRGUI:
         if file_path:
             try:
                 if file_path.endswith('.json'):
-                    # 导出JSON格式：结构化数据
+                                       # 导出JSON格式：结构化数据
                     export_data = {
                         "metadata": {
                             "生成时间": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -1597,16 +1841,36 @@ class CompleteLRGUI:
             line_match = re.search(r'line (\d+)', cleaned_error)
             line_info = f"第{line_match.group(1)}行" if line_match else "某行"
             
-            formatted = f"✗ 产生式格式错误（{line_info}）\n\n"
-            formatted += "错误描述: 产生式不符合标准格式\n\n"
-            formatted += "正确格式:\n"
-            formatted += "  A -> alpha        # 基本产生式\n"
-            formatted += "  A -> alpha | beta # 多选择产生式\n"
-            formatted += "  A -> ε           # 空产生式\n\n"
-            formatted += "常见错误:\n"
-            formatted += "1. 缺少 '->' 分隔符\n"
-            formatted += "2. 左部为空或包含非法字符\n"
-            formatted += "3. 使用了错误的箭头符号（如 '=>', ':'等）\n"
+            # 检查是否是括号匹配问题
+            if self._is_bracket_mismatch_error(cleaned_error):
+                formatted = f"✗ 括号匹配错误（{line_info}）\n\n"
+                formatted += "错误描述: 产生式中的括号不匹配\n\n"
+                formatted += "常见括号匹配错误:\n"
+                formatted += "1. 圆括号不匹配：( 和 ) 数量不等或顺序错误\n"
+                formatted += "2. 方括号不匹配：[ 和 ] 数量不等或顺序错误\n"
+                formatted += "3. 花括号不匹配：{ 和 } 数量不等或顺序错误\n"
+                formatted += "4. 括号嵌套错误：如 [(] 这样的错误嵌套\n\n"
+                formatted += "正确示例:\n"
+                formatted += "  F -> ( E )     # 正确的圆括号匹配\n"
+                formatted += "  F -> [ E ]     # 正确的方括号匹配\n"
+                formatted += "  F -> { E }     # 正确的花括号匹配\n"
+                formatted += "  F -> ( [ E ] ) # 正确的嵌套匹配\n\n"
+                formatted += "错误示例:\n"
+                formatted += "  F -> ( E       # 缺少右括号\n"
+                formatted += "  F -> E )       # 缺少左括号\n"
+                formatted += "  F -> ( E ]     # 括号类型不匹配\n"
+            else:
+                formatted = f"✗ 产生式格式错误（{line_info}）\n\n"
+                formatted += "错误描述: 产生式不符合标准格式\n\n"
+                formatted += "正确格式:\n"
+                formatted += "  A -> alpha        # 基本产生式\n"
+                formatted += "  A -> alpha | beta # 多选择产生式\n"
+                formatted += "  A -> ε           # 空产生式\n\n"
+                formatted += "常见错误:\n"
+                formatted += "1. 缺少 '->' 分隔符\n"
+                formatted += "2. 左部为空或包含非法字符\n"
+                formatted += "3. 使用了错误的箭头符号（如 '=>', ':'等）\n"
+                formatted += "4. 括号不匹配\n"
             
         elif "cannot derive any terminal string" in cleaned_error or "无法推导出任何终结符串" in cleaned_error:
             # 提取符号名称
@@ -1736,27 +2000,62 @@ class CompleteLRGUI:
         selection = event.widget.select()
         tab_text = event.widget.tab(selection, "text")
         self.update_status(f"已切换到: {tab_text}")
+    
+    def _is_bracket_mismatch_error(self, error_msg):
+        """
+        检测错误是否由括号不匹配引起
+        
+        通过分析错误信息中的产生式内容，判断是否包含不匹配的括号
+        
+        Args:
+            error_msg (str): 错误信息字符串
+            
+        Returns:
+            bool: 如果是括号匹配错误返回True，否则返回False
+        """
+        # 从错误信息中提取产生式内容
+        production_match = re.search(r'line \d+:\s*(.+)$', error_msg, re.MULTILINE)
+        if not production_match:
+            return False
+            
+        production_line = production_match.group(1).strip()
+        
+        # 检查是否包含括号
+        if not any(bracket in production_line for bracket in '()[]{}"'):
+            return False
+        
+        # 简单的括号匹配检查
+        return not self._check_brackets_balance(production_line)
+    
+    def _check_brackets_balance(self, line):
+        """
+        检查字符串中的括号是否平衡
+        
+        Args:
+            line (str): 要检查的字符串
+            
+        Returns:
+            bool: 括号平衡返回True，不平衡返回False
+        """
+        stack = []
+        bracket_pairs = {'(': ')', '[': ']', '{': '}'}
+        
+        for char in line:
+            if char in bracket_pairs:  # 左括号
+                stack.append(char)
+            elif char in bracket_pairs.values():  # 右括号
+                if not stack:
+                    return False  # 右括号多于左括号
+                
+                left = stack.pop()
+                if bracket_pairs[left] != char:
+                    return False  # 括号类型不匹配
+        
+        return len(stack) == 0  # 栈为空表示所有括号都匹配
 
+    # ...existing code...
 def main():
-    """
-    主函数 - 应用程序入口点
-    
-    该函数负责应用程序的启动和初始化：
-    1. 跨平台C++后端可执行文件检测
-    2. 用户友好的错误提示和指导
-    3. GUI窗口创建和居中显示
-    4. 主事件循环启动和异常处理
-    
-    启动流程：
-    检测C++后端 → 创建GUI → 居中窗口 → 启动事件循环
-    
-    平台兼容性：
-    - Windows: 查找 lr_cli.exe 或 lr_cli
-    - Linux/Unix: 查找 lr_cli 或 lr_cli.exe
-    
-    用户指导：
-    如果未找到C++后端，提供具体的编译指令和继续选项
-    """
+    """主函数 - 应用程序入口点"""
     # 第一步：检测C++后端可执行文件 - 跨平台兼容
     current_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(current_dir)

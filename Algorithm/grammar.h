@@ -9,9 +9,7 @@
  * - 文法的增广（添加新的开始符号）
  * - 终结符和非终结符的自动识别
  *
- * @author ZJJ
- * @date 2025.6.19
- * @version 3.0
+ * @author B22040310朱家骏
  */
 
 #ifndef GRAMMAR_H
@@ -90,10 +88,10 @@ private:
 
     void parseProduction(const std::string& line);
     void extractSymbols();
-    
-    // 验证文法的完整性和格式
+      // 验证文法的完整性和格式
     bool validateGrammar();                                   // 检查文法是否完整
     bool isValidProductionFormat(const std::string& line);    // 检查产生式格式是否正确
+    bool checkParenthesesBalance(const std::string& line);     // 检查括号匹配
     bool hasReachableSymbols();                               // 检查是否有可达符号（警告）
     bool checkReachableProductions();                         // 检查可达产生式
     void reportError(const std::string& message);             // 报告错误信息

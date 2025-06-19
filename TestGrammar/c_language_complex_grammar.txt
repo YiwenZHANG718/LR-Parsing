@@ -1,0 +1,73 @@
+# 复杂C语言子集文法
+# 特点：包含函数声明、变量声明、控制流、表达式等完整编程语言结构
+# 复杂度：高，约30个产生式，支持函数、条件、循环、表达式
+# 分析器兼容性：SLR(1), LR(1)
+# 典型输入示例：
+#   - 函数定义: int id ( ) { return num ; }
+#   - 变量声明: int id ;
+#   - 函数中条件: int id ( ) { if ( id ) return num ; }
+#   - 复合程序: int id ( int id ) { if ( id ) return id ; else return num ; }
+
+# 程序
+Program -> DeclList
+
+# 声明列表
+DeclList -> Decl
+DeclList -> Decl DeclList
+
+# 声明
+Decl -> VarDecl
+Decl -> FuncDecl
+
+# 变量声明
+VarDecl -> Type id ;
+
+# 函数声明
+FuncDecl -> Type id ( ) { StmtList }
+FuncDecl -> Type id ( ParamList ) { StmtList }
+
+# 参数列表
+ParamList -> Type id
+ParamList -> Type id , ParamList
+
+# 类型
+Type -> int
+Type -> float
+
+# 语句列表
+StmtList -> Stmt
+StmtList -> Stmt StmtList
+
+Stmt -> MatchedStmt
+Stmt -> UnmatchedStmt
+
+# 匹配语句 - 所有if都有对应的else
+MatchedStmt -> Expr ;
+MatchedStmt -> { StmtList }
+MatchedStmt -> if ( Expr ) MatchedStmt else MatchedStmt
+MatchedStmt -> while ( Expr ) MatchedStmt
+MatchedStmt -> return Expr ;
+MatchedStmt -> return ;
+
+# 非匹配语句 - 存在未匹配的if
+UnmatchedStmt -> if ( Expr ) Stmt
+UnmatchedStmt -> if ( Expr ) MatchedStmt else UnmatchedStmt
+UnmatchedStmt -> while ( Expr ) UnmatchedStmt
+
+# 表达式
+Expr -> Term
+Expr -> Expr + Term
+Expr -> Expr - Term
+
+Term -> Factor
+Term -> Term * Factor
+
+Factor -> id
+Factor -> num
+Factor -> ( Expr )
+Factor -> id ( )
+Factor -> id ( ArgList )
+
+# 参数列表
+ArgList -> Expr
+ArgList -> Expr , ArgList

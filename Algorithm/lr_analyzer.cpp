@@ -8,6 +8,8 @@
  * - ACTION表和GOTO表的构造
  * - 语法分析过程的动态展示
  * - 冲突检测和报告
+ *
+ * @author B22040317张舜灵
  */
 
 #include "lr_analyzer.h"
@@ -15,6 +17,8 @@
 #include <queue>
 #include <algorithm>
 #include <stack>
+
+// 注意：g_silent_mode 在 grammar.cpp 中定义
 
  /**
   * @brief 将Action转换为字符串表示
@@ -827,7 +831,9 @@ void LRAnalyzer::printItemSetsJSON() const {
 
 bool LRAnalyzer::parse(const std::vector<std::string>& input) {
     if (itemSets.empty()) {
-        std::cout << "错误：分析表未构造" << std::endl;
+        if (!g_silent_mode) {
+            std::cout << "错误：分析表未构造" << std::endl;
+        }
         return false;
     }
 
@@ -838,54 +844,62 @@ bool LRAnalyzer::parse(const std::vector<std::string>& input) {
 
     stateStack.push(0);
 
-    std::cout << "\n语法分析过程：" << std::endl;
-    std::cout << "步骤\t状态栈\t符号栈\t\t输入\t\t动作" << std::endl;
+    if (!g_silent_mode) {
+        std::cout << "\n语法分析过程：" << std::endl;
+        std::cout << "步骤\t状态栈\t符号栈\t\t输入\t\t动作" << std::endl;
+    }
 
     int step = 0;
     while (true) {
-        // 打印当前状态
-        std::cout << step++ << "\t";
+        if (!g_silent_mode) {
+            // 打印当前状态
+            std::cout << step++ << "\t";
 
-        std::stack<int> tempStateStack = stateStack;
-        std::vector<int> states;
-        while (!tempStateStack.empty()) {
-            states.push_back(tempStateStack.top());
-            tempStateStack.pop();
-        }
-        std::reverse(states.begin(), states.end());
-        for (int state : states) {
-            std::cout << state << " ";
-        }
-        std::cout << "\t";
+            std::stack<int> tempStateStack = stateStack;
+            std::vector<int> states;
+            while (!tempStateStack.empty()) {
+                states.push_back(tempStateStack.top());
+                tempStateStack.pop();
+            }
+            std::reverse(states.begin(), states.end());
+            for (int state : states) {
+                std::cout << state << " ";
+            }
+            std::cout << "\t";
 
-        std::stack<std::string> tempSymbolStack = symbolStack;
-        std::vector<std::string> symbols;
-        while (!tempSymbolStack.empty()) {
-            symbols.push_back(tempSymbolStack.top());
-            tempSymbolStack.pop();
-        }
-        std::reverse(symbols.begin(), symbols.end());
-        for (const auto& symbol : symbols) {
-            std::cout << symbol << " ";
-        }
-        std::cout << "\t\t";
+            std::stack<std::string> tempSymbolStack = symbolStack;
+            std::vector<std::string> symbols;
+            while (!tempSymbolStack.empty()) {
+                symbols.push_back(tempSymbolStack.top());
+                tempSymbolStack.pop();
+            }
+            std::reverse(symbols.begin(), symbols.end());
+            for (const auto& symbol : symbols) {
+                std::cout << symbol << " ";
+            }
+            std::cout << "\t\t";
 
-        for (const auto& symbol : inputBuffer) {
-            std::cout << symbol << " ";
+            for (const auto& symbol : inputBuffer) {
+                std::cout << symbol << " ";
+            }
+            std::cout << "\t\t";
         }
-        std::cout << "\t\t";
 
         int currentState = stateStack.top();
         std::string currentInput = inputBuffer[0];
 
         auto actionKey = std::make_pair(currentState, currentInput);
         if (actionTable.find(actionKey) == actionTable.end()) {
-            std::cout << "错误：无对应动作" << std::endl;
+            if (!g_silent_mode) {
+                std::cout << "错误：无对应动作" << std::endl;
+            }
             return false;
         }
 
         Action action = actionTable[actionKey];
-        std::cout << action.toString() << std::endl;
+        if (!g_silent_mode) {
+            std::cout << action.toString() << std::endl;
+        }
 
         switch (action.type) {
         case ActionType::SHIFT:
@@ -897,7 +911,9 @@ bool LRAnalyzer::parse(const std::vector<std::string>& input) {
         case ActionType::REDUCE:
         {
             const Production& prod = action.production;
-            std::cout << "\t\t\t\t\t\t归约用产生式: " << prod.toString() << std::endl;
+            if (!g_silent_mode) {
+                std::cout << "\t\t\t\t\t\t归约用产生式: " << prod.toString() << std::endl;
+            }
 
             // 弹出产生式右部长度个状态和符号
             if (!(prod.right.size() == 1 && prod.right[0] == "ε")) {
@@ -912,7 +928,9 @@ bool LRAnalyzer::parse(const std::vector<std::string>& input) {
             auto gotoKey = std::make_pair(gotoState, prod.left);
 
             if (gotoTable.find(gotoKey) == gotoTable.end()) {
-                std::cout << "错误：GOTO表中无对应项" << std::endl;
+                if (!g_silent_mode) {
+                    std::cout << "错误：GOTO表中无对应项" << std::endl;
+                }
                 return false;
             }
 
@@ -921,12 +939,16 @@ bool LRAnalyzer::parse(const std::vector<std::string>& input) {
         break;
 
         case ActionType::ACCEPT:
-            std::cout << "\n✓ 分析成功！输入串被接受。" << std::endl;
+            if (!g_silent_mode) {
+                std::cout << "\n✓ 分析成功！输入串被接受。" << std::endl;
+            }
             return true;
 
         case ActionType::ERROR:
         default:
-            std::cout << "错误：分析失败" << std::endl;
+            if (!g_silent_mode) {
+                std::cout << "错误：分析失败" << std::endl;
+            }
             return false;
         }
     }

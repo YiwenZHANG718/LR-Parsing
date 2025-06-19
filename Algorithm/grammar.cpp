@@ -10,9 +10,7 @@
  * - 终结符和非终结符的自动识别
  * - 文法验证和错误检测
  *
- * @author ZJJ
- * @date 2025.6.19
- * @version 3.0
+ * @author B22040310朱家骏
  */
 
 #include "grammar.h"
@@ -21,23 +19,6 @@
 #include <iostream>
 #include <algorithm>
 #include <queue>
-
-#ifdef _WIN32
-#include <windows.h>
-#include <io.h>
-#include <fcntl.h>
-#include <locale.h>
-
-// 设置控制台编码为UTF-8
-static bool initConsoleUTF8() {
-    SetConsoleOutputCP(65001);
-    SetConsoleCP(65001);
-    setlocale(LC_ALL, ".UTF8");
-    system("chcp 65001 >nul 2>&1");
-    return true;
-}
-static bool utf8_initialized = initConsoleUTF8();
-#endif
 
 // 全局静默模式控制变量
 bool g_silent_mode = false;
@@ -53,8 +34,8 @@ bool g_silent_mode = false;
   */
 std::string Production::toString() const {
     std::string result = left + " -> ";
-    if (right.empty() || (right.size() == 1 && right[0] == "?")) {
-        result += "?";
+    if (right.empty() || (right.size() == 1 && right[0] == "ε")) {
+        result += "ε";
     }
     else {
         for (size_t i = 0; i < right.size(); ++i) {
@@ -208,7 +189,7 @@ void Grammar::parseProduction(const std::string& line) {
 
         // 处理空右部
         if (symbols.empty()) {
-            symbols.push_back("?");
+            symbols.push_back("ε");
         }
 
         productions.emplace_back(left, symbols);
@@ -235,7 +216,7 @@ void Grammar::extractSymbols() {
     for (const auto& prod : productions) {
         for (const auto& symbol : prod.right) {
             // 只将非终结符以外的符号标记为终结符
-            if (symbol != "?" && nonterminals.find(symbol) == nonterminals.end()) {
+            if (symbol != "ε" && nonterminals.find(symbol) == nonterminals.end()) {
                 terminals.insert(symbol);
             }
         }
@@ -373,7 +354,59 @@ bool Grammar::isValidProductionFormat(const std::string& line) {
         return false;
     }
     
+    // 检查括号匹配
+    if (!checkParenthesesBalance(line)) {
+        return false;
+    }
+    
     return true;
+}
+
+/**
+ * @brief 检查产生式中的括号是否匹配
+ * 
+ * 支持的括号类型：
+ * - 圆括号 ()
+ * - 方括号 []
+ * - 花括号 {}
+ * 
+ * 检查规则：
+ * 1. 左括号和右括号数量必须相等
+ * 2. 任何位置左括号数量都不能少于右括号数量
+ * 3. 不同类型的括号必须正确嵌套
+ * 
+ * @param line 待检查的产生式字符串
+ * @return 括号匹配返回true，存在不匹配返回false
+ */
+bool Grammar::checkParenthesesBalance(const std::string& line) {
+    std::vector<char> stack;
+    
+    for (char c : line) {
+        // 遇到左括号，入栈
+        if (c == '(' || c == '[' || c == '{') {
+            stack.push_back(c);
+        }
+        // 遇到右括号，检查匹配
+        else if (c == ')' || c == ']' || c == '}') {
+            if (stack.empty()) {
+                // 右括号多于左括号
+                return false;
+            }
+            
+            char top = stack.back();
+            stack.pop_back();
+            
+            // 检查括号类型是否匹配
+            if ((c == ')' && top != '(') ||
+                (c == ']' && top != '[') ||
+                (c == '}' && top != '{')) {
+                return false;
+            }
+        }
+    }
+    
+    // 栈应该为空，表示所有括号都匹配
+    return stack.empty();
 }
 
 /**

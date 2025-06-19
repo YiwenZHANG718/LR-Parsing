@@ -1,7 +1,7 @@
 #!/bin/bash
 # LR语法分析器自动化测试脚本 - 高级版
 # 支持多种测试模式：简单测试、压力测试、对比测试等
-
+# @author: B22040310朱家骏
 # 脚本版本和信息
 SCRIPT_VERSION="3.2"
 SCRIPT_NAME="test_all_grammars.sh"
@@ -15,7 +15,7 @@ show_help() {
     echo "用法: ./$SCRIPT_NAME [选项] [参数]"
     echo
     echo "测试模式:"
-    echo "  simple             简单测试模式 - 测试所有基础文法的基本功能"
+    echo "  simple             简单测试模式 - 测试所有文法的基本功能"
     echo "  all                完整测试模式 - 运行所有测试 (默认)"
     echo "  comparison <文法>  对比测试模式 - 对指定文法运行不同分析器对比"
     echo "  stress             压力测试模式 - 运行复杂文法和极限测试"
@@ -23,8 +23,8 @@ show_help() {
     echo
     echo "对比测试示例:"
     echo "  ./$SCRIPT_NAME comparison example_grammar.txt"
-    echo "  ./$SCRIPT_NAME comparison ultra_long_grammar.txt"
-    echo "  ./$SCRIPT_NAME comparison complex_grammar.txt"
+    echo "  ./$SCRIPT_NAME comparison c_language_complex_grammar.txt"
+    echo "  ./$SCRIPT_NAME comparison programming_language_complex_grammar.txt"
     echo
     echo "其他示例:"
     echo "  ./$SCRIPT_NAME simple          # 运行简单测试"
@@ -32,14 +32,17 @@ show_help() {
     echo "  ./$SCRIPT_NAME all             # 运行完整测试"
     echo "  ./$SCRIPT_NAME                 # 运行完整测试(默认)"
     echo
+    echo "注意: 更多高级测试方法请查看SCRIPT_DOCUMENTATION.md"
+    echo
     echo "支持的文法文件:"
-    echo "  - example_grammar.txt          基本算术表达式文法"
-    echo "  - assignment_grammar.txt       赋值语句文法"
-    echo "  - conditional_grammar.txt      条件语句文法"
-    echo "  - complex_grammar.txt          复杂C语言文法"
-    echo "  - ultra_long_grammar.txt       超长无冲突文法"
-    echo "  - if_else_language_grammar.txt 带if-else的编程语言文法"
+    echo "  - example_grammar.txt                 基本算术表达式文法"
+    echo "  - assignment_grammar.txt              赋值语句文法"
+    echo "  - conditional_grammar.txt             条件语句文法"
+    echo "  - c_language_complex_grammar.txt      复杂C语言文法"
+    echo "  - programming_language_complex_grammar.txt 带if-else的编程语言文法"
+    echo "  - modular_language_complex_grammar.txt 模块化编程语言文法"
     echo "  - 以及 FaultGrammar/ 目录下的错误文法文件"
+    echo "注意: 如需添加新文法请查看SCRIPT_DOCUMENTATION.md或README.md获取文法命名规则"
     echo
     echo "注意: 对比测试将使用 LR(0), SLR(1), LR(1) 三种分析器分别测试指定文法"
     echo "======================================================================"
@@ -73,7 +76,7 @@ parse_arguments() {
                 else
                     echo "错误: comparison 模式需要指定文法文件"
                     echo "用法: ./$SCRIPT_NAME comparison <文法文件>"
-                    echo "例如: ./$SCRIPT_NAME comparison ultra_long_grammar.txt"
+                    echo "例如: ./$SCRIPT_NAME comparison c_language_complex_grammar.txt"
                     exit 1
                 fi
                 ;;
@@ -199,24 +202,19 @@ smart_analyzer_selection() {
 # 简单测试模式
 run_simple_tests() {
     echo "=======================================" | tee -a $LOG_FILE
-    echo "      简单测试模式 - 基础文法测试"  | tee -a $LOG_FILE
+    echo "      简单测试模式 - 基础文法测试"   | tee -a $LOG_FILE
     echo "=======================================" | tee -a $LOG_FILE
     
-    # 排除的长文法列表
-    exclude_grammars=("complex_grammar.txt" "ultra_long_grammar.txt" "if_else_language_grammar.txt")
-    
-    echo ">>> 测试所有基础正确文法（排除复杂长文法）" | tee -a $LOG_FILE
+    echo ">>> 测试所有基础正确文法（自动排除复杂文法）" | tee -a $LOG_FILE
     grammar_count=0
     for grammar_file in *_grammar.txt; do
         if [ -f "$grammar_file" ]; then
-            # 检查是否在排除列表中
+            # 检查是否为复杂文法（*_complex_grammar.txt 模式）
             skip_file=false
-            for exclude in "${exclude_grammars[@]}"; do
-                if [ "$grammar_file" = "$exclude" ]; then
-                    skip_file=true
-                    break
-                fi
-            done
+            if [[ "$grammar_file" =~ .*_complex_grammar\.txt$ ]]; then
+                skip_file=true
+                echo "跳过复杂文法: $grammar_file" | tee -a $LOG_FILE
+            fi
             
             if [ "$skip_file" = true ]; then
                 echo "跳过复杂文法: $grammar_file" | tee -a $LOG_FILE
@@ -335,14 +333,14 @@ run_comparison_tests() {
         *"conditional"*)
             test_input="if id then id = num else id = id"
             ;;
-        *"complex"*)
+        *"c_language_complex"*)
             test_input="int id ( ) { return num ; }"
             ;;
-        *"ultra_long"*)
-            test_input="var id : bool ;"
-            ;;
-        *"if_else"*)
+        *"programming_language_complex"*)
             test_input="if ( id > number ) { id = number ; }"
+            ;;
+        *"modular_language_complex"*)
+            test_input="var id : bool ;"
             ;;
         *)
             test_input="id"  # 通用简单输入
@@ -400,24 +398,25 @@ run_stress_tests() {
     echo "         压力测试模式 - 复杂文法测试" | tee -a $LOG_FILE
     echo "=======================================" | tee -a $LOG_FILE
     
-    # 复杂文法压力测试
-    stress_grammars=("complex_grammar.txt" "ultra_long_grammar.txt" "if_else_language_grammar.txt")
-    
-    for grammar in "${stress_grammars[@]}"; do
+    # 自动发现复杂文法进行压力测试
+    echo ">> 自动发现复杂文法..." | tee -a $LOG_FILE
+    complex_count=0
+    for grammar in *_complex_grammar.txt; do
         if [ -f "$grammar" ]; then
+            ((complex_count++))
             echo ">> 压力测试: $grammar" | tee -a $LOG_FILE
             rule_count=$(grep -c " -> " "$grammar")
             echo "文法规模: $rule_count 个产生式" | tee -a $LOG_FILE
             
             # 基础压力测试
-            test_grammar "$grammar" "压力测试 - $(basename "$grammar" .txt)" "slr1"
+            test_grammar "$grammar" "压力测试 - $(basename "$grammar" .txt)" "lr1"
             
             # 连续构造测试
             echo ">> 连续构造压力测试..." | tee -a $LOG_FILE
             for ((i=1; i<=10; i++)); do
                 ((total_tests++))
                 echo "测试 #$total_tests: 连续构造 $grammar ($i/10)" | tee -a $LOG_FILE
-                if timeout 30s $CLI "$grammar" -t slr1 --table --json > /dev/null 2>&1; then
+                if timeout 30s $CLI "$grammar" -t lr1 --table --json > /dev/null 2>&1; then
                     echo "✓ 构造成功" | tee -a $LOG_FILE
                     ((successful_tests++))
                 else
@@ -473,14 +472,14 @@ run_full_tests() {
                 "conditional_grammar.txt")
                     test_grammar "$grammar_file" "条件语句文法" "$analyzer" "if id then id = num else id = id"
                     ;;
-                "complex_grammar.txt")
+                "c_language_complex_grammar.txt")
                     test_grammar "$grammar_file" "复杂C语言文法" "$analyzer" "int id ( ) { return num ; }"
                     ;;
-                "ultra_long_grammar.txt")
-                    test_grammar "$grammar_file" "超长无冲突文法" "slr1" "var id : bool ;"
+                "programming_language_complex_grammar.txt")
+                    test_grammar "$grammar_file" "带if-else的编程语言文法" "$analyzer" "if ( id > number ) { id = number ; }"
                     ;;
-                "if_else_language_grammar.txt")
-                    test_grammar "$grammar_file" "带if-else的编程语言文法" "slr1" "if ( id > number ) { id = number ; }"
+                "modular_language_complex_grammar.txt")
+                    test_grammar "$grammar_file" "模块化编程语言文法" "$analyzer" "var id : bool ;"
                     ;;
                 *)
                     rule_count=$(grep -c " -> " "$grammar_file" 2>/dev/null || echo "0")

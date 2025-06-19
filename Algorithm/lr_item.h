@@ -15,9 +15,7 @@
  * 项目集是LR项目的集合，对应于LR自动机的一个状态。
  * 通过计算项目集的闭包和GOTO函数，可以构造LR分析表。
  *
- * @author ZJJ
- * @date 2025.6.10
- * @version 2.0
+ * @author B22040310朱家骏
  */
 
 #ifndef LR_ITEM_H

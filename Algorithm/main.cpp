@@ -18,9 +18,7 @@
  * - 交互式实验
  * - 调试和测试
  *
- * @author ZJJ
- * @date 2025
- * @version 1.0
+ * @author B22040310朱家骏
  */
 
 #include <iostream>

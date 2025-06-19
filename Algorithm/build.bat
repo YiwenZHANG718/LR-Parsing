@@ -1,6 +1,6 @@
 @echo off
 REM Build script for LR Grammar Analyzer (Windows)
-REM Author: ZJJ
+REM Author: B22040310
 REM Features: Cross-platform compilation with automatic cleanup
 
 setlocal EnableDelayedExpansion

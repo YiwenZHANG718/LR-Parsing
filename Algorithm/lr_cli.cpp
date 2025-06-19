@@ -17,9 +17,7 @@
  * - 分析输入串: ./lr_cli grammar.txt -s "a + a * a"
  * - JSON输出: ./lr_cli grammar.txt --table --json
  *
- * @author 语法分析课程设计
- * @date 2025.6.11
- * @version 2.0
+ * @author B22040310朱家骏
  */
 
 #include <iostream>

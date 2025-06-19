@@ -1,6 +1,6 @@
 # LR语法分析器 - Makefile
 # 支持 LR(0)/SLR(1)/LR(1) 分析算法
-# @author ZJJ
+# @author B22040310朱家骏
 # @date 2025.6.11
 # @version 2.0
 # 使用方法：

@@ -1,0 +1,272 @@
+# 超长无冲突LR文法
+# 特点：大规模编程语言文法，包含完整的模块系统、类型系统、函数、控制结构
+# 复杂度：高，151个产生式，支持模块导入、多种数据类型、复合结构
+# 分析器兼容性：SLR(1), LR(1) （专门设计为无冲突）
+# 典型输入示例：
+#   - 变量声明: var id : bool ;
+#   - 常量定义: const id = decimal ;
+#   - 模块导入: import id ; var id : int8 = true ;
+#   - 函数定义: func id ( ) { return decimal ; }
+#   - 数组类型: var id : array [ decimal ] of bool = [ true , false ] ;
+#   - 复合结构: import id ; const id = true ; func id ( ) { return id ; }
+#   - 指针类型: var id : ptr int32 ;
+#   - 函数签名: func id ( id : string , id : int32 ) : bool { return false ; }
+
+# 程序结构
+Program -> ModuleList
+
+# 模块列表
+ModuleList -> Module
+ModuleList -> Module ModuleList
+
+# 模块定义
+Module -> ImportDecl
+Module -> TypeDecl
+Module -> VarDecl
+Module -> FuncDecl
+Module -> ConstDecl
+
+# 导入声明
+ImportDecl -> import StringLit ;
+ImportDecl -> import id ;
+
+# 类型声明
+TypeDecl -> type id = TypeSpec ;
+
+# 类型规格
+TypeSpec -> PrimType
+TypeSpec -> ArrayType
+TypeSpec -> StructType
+TypeSpec -> PointerType
+
+# 基础类型
+PrimType -> int8
+PrimType -> int16
+PrimType -> int32
+PrimType -> int64
+PrimType -> uint8
+PrimType -> uint16
+PrimType -> uint32
+PrimType -> uint64
+PrimType -> float32
+PrimType -> float64
+PrimType -> bool
+PrimType -> string
+PrimType -> char
+
+# 数组类型
+ArrayType -> array [ IntLit ] of TypeSpec
+
+# 结构体类型
+StructType -> struct { FieldList }
+StructType -> struct { }
+
+# 字段列表
+FieldList -> Field
+FieldList -> Field FieldList
+
+# 字段定义
+Field -> id : TypeSpec ;
+
+# 指针类型
+PointerType -> ptr TypeSpec
+
+# 常量声明
+ConstDecl -> const id = ConstExpr ;
+
+# 常量表达式
+ConstExpr -> IntLit
+ConstExpr -> FloatLit
+ConstExpr -> StringLit
+ConstExpr -> CharLit
+ConstExpr -> BoolLit
+ConstExpr -> id
+
+# 变量声明
+VarDecl -> var id : TypeSpec ;
+VarDecl -> var id : TypeSpec = InitExpr ;
+
+# 初始化表达式
+InitExpr -> Expr
+InitExpr -> ArrayInit
+InitExpr -> StructInit
+
+# 数组初始化
+ArrayInit -> [ ExprList ]
+ArrayInit -> [ ]
+
+# 结构体初始化
+StructInit -> { FieldInitList }
+StructInit -> { }
+
+# 字段初始化列表
+FieldInitList -> FieldInit
+FieldInitList -> FieldInit , FieldInitList
+
+# 字段初始化
+FieldInit -> id : Expr
+
+# 函数声明
+FuncDecl -> func id ( ParamList ) : TypeSpec BlockStmt
+FuncDecl -> func id ( ) : TypeSpec BlockStmt
+FuncDecl -> func id ( ParamList ) BlockStmt
+FuncDecl -> func id ( ) BlockStmt
+
+# 参数列表
+ParamList -> Param
+ParamList -> Param , ParamList
+
+# 参数
+Param -> id : TypeSpec
+
+# 块语句
+BlockStmt -> { StmtList }
+BlockStmt -> { }
+
+# 语句列表
+StmtList -> Stmt
+StmtList -> Stmt StmtList
+
+# 语句
+Stmt -> SimpleStmt
+Stmt -> CompoundStmt
+
+# 简单语句
+SimpleStmt -> AssignStmt
+SimpleStmt -> ExprStmt
+SimpleStmt -> VarDecl
+SimpleStmt -> ReturnStmt
+SimpleStmt -> BreakStmt
+SimpleStmt -> ContinueStmt
+
+# 复合语句
+CompoundStmt -> IfStmt
+CompoundStmt -> WhileStmt
+CompoundStmt -> ForStmt
+CompoundStmt -> SwitchStmt
+CompoundStmt -> BlockStmt
+
+# 赋值语句
+AssignStmt -> id = Expr ;
+AssignStmt -> id += Expr ;
+AssignStmt -> id -= Expr ;
+AssignStmt -> id *= Expr ;
+AssignStmt -> id /= Expr ;
+
+# 表达式语句
+ExprStmt -> Expr ;
+
+# 返回语句
+ReturnStmt -> return Expr ;
+ReturnStmt -> return ;
+
+# 控制语句
+BreakStmt -> break ;
+ContinueStmt -> continue ;
+
+# If语句 (消除悬挂else)
+IfStmt -> if ( Expr ) BlockStmt
+IfStmt -> if ( Expr ) BlockStmt else BlockStmt
+
+# While语句
+WhileStmt -> while ( Expr ) BlockStmt
+
+# For语句
+ForStmt -> for ( ForInit ; Expr ; ForUpdate ) BlockStmt
+
+# For初始化
+ForInit -> SimpleStmt
+ForInit -> 
+
+# For更新
+ForUpdate -> id = Expr
+ForUpdate -> 
+
+# Switch语句
+SwitchStmt -> switch ( Expr ) { CaseList }
+SwitchStmt -> switch ( Expr ) { }
+
+# Case列表
+CaseList -> CaseClause
+CaseList -> CaseClause CaseList
+
+# Case子句
+CaseClause -> case ConstExpr : StmtList
+CaseClause -> default : StmtList
+
+# 表达式层次 (严格避免二义性)
+Expr -> LogicalOrExpr
+
+# 逻辑或
+LogicalOrExpr -> LogicalAndExpr
+LogicalOrExpr -> LogicalOrExpr or LogicalAndExpr
+
+# 逻辑与
+LogicalAndExpr -> EqualityExpr
+LogicalAndExpr -> LogicalAndExpr and EqualityExpr
+
+# 相等性
+EqualityExpr -> RelationalExpr
+EqualityExpr -> EqualityExpr == RelationalExpr
+EqualityExpr -> EqualityExpr != RelationalExpr
+
+# 关系
+RelationalExpr -> AdditiveExpr
+RelationalExpr -> RelationalExpr < AdditiveExpr
+RelationalExpr -> RelationalExpr > AdditiveExpr
+RelationalExpr -> RelationalExpr <= AdditiveExpr
+RelationalExpr -> RelationalExpr >= AdditiveExpr
+
+# 加减
+AdditiveExpr -> MultiplicativeExpr
+AdditiveExpr -> AdditiveExpr + MultiplicativeExpr
+AdditiveExpr -> AdditiveExpr - MultiplicativeExpr
+
+# 乘除
+MultiplicativeExpr -> UnaryExpr
+MultiplicativeExpr -> MultiplicativeExpr * UnaryExpr
+MultiplicativeExpr -> MultiplicativeExpr / UnaryExpr
+MultiplicativeExpr -> MultiplicativeExpr % UnaryExpr
+
+# 一元表达式
+UnaryExpr -> PostfixExpr
+UnaryExpr -> - UnaryExpr
+UnaryExpr -> + UnaryExpr
+UnaryExpr -> not UnaryExpr
+UnaryExpr -> & UnaryExpr
+UnaryExpr -> * UnaryExpr
+
+# 后缀表达式
+PostfixExpr -> PrimaryExpr
+PostfixExpr -> PostfixExpr . id
+PostfixExpr -> PostfixExpr [ Expr ]
+PostfixExpr -> PostfixExpr ( ExprList )
+PostfixExpr -> PostfixExpr ( )
+
+# 基础表达式
+PrimaryExpr -> id
+PrimaryExpr -> IntLit
+PrimaryExpr -> FloatLit
+PrimaryExpr -> StringLit
+PrimaryExpr -> CharLit
+PrimaryExpr -> BoolLit
+PrimaryExpr -> ( Expr )
+
+# 表达式列表
+ExprList -> Expr
+ExprList -> Expr , ExprList
+
+# 字面量定义
+IntLit -> decimal
+IntLit -> hex
+IntLit -> octal
+IntLit -> binary
+
+FloatLit -> float_num
+
+StringLit -> string_literal
+
+CharLit -> char_literal
+
+BoolLit -> true
+BoolLit -> false
